@@ -64,6 +64,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "twitch" && user.id) {
+        await prisma.twitchConnection.upsert({
+          where: { userId: user.id },
+          update: {
+            twitchId: account.providerAccountId,
+            twitchLogin: (profile as { login?: string })?.login ?? "",
+            accessToken: account.access_token!,
+            refreshToken: account.refresh_token!,
+            expiresAt: new Date((account.expires_at ?? 0) * 1000),
+          },
+          create: {
+            userId: user.id,
+            twitchId: account.providerAccountId,
+            twitchLogin: (profile as { login?: string })?.login ?? "",
+            accessToken: account.access_token!,
+            refreshToken: account.refresh_token!,
+            expiresAt: new Date((account.expires_at ?? 0) * 1000),
+          },
+        })
+      }
+      return true
+    },
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id!
