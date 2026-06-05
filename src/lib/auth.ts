@@ -1,6 +1,5 @@
 import NextAuth, { DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import Twitch from "next-auth/providers/twitch"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 
@@ -17,11 +16,6 @@ declare module "next-auth" {
 declare module "@auth/core/jwt" {
   interface JWT {
     id: string
-    twitchToken?: {
-      accessToken: string
-      refreshToken: string
-      expiresAt?: number
-    }
   }
 }
 
@@ -58,45 +52,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       },
     }),
-    Twitch({
-      clientId: process.env.TWITCH_CLIENT_ID!,
-      clientSecret: process.env.TWITCH_CLIENT_SECRET!,
-    }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "twitch" && user.id) {
-        await prisma.twitchConnection.upsert({
-          where: { userId: user.id },
-          update: {
-            twitchId: account.providerAccountId,
-            twitchLogin: (profile as { login?: string })?.login ?? "",
-            accessToken: account.access_token!,
-            refreshToken: account.refresh_token!,
-            expiresAt: new Date((account.expires_at ?? 0) * 1000),
-          },
-          create: {
-            userId: user.id,
-            twitchId: account.providerAccountId,
-            twitchLogin: (profile as { login?: string })?.login ?? "",
-            accessToken: account.access_token!,
-            refreshToken: account.refresh_token!,
-            expiresAt: new Date((account.expires_at ?? 0) * 1000),
-          },
-        })
-      }
-      return true
-    },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id!
-      }
-      if (account?.provider === "twitch") {
-        token.twitchToken = {
-          accessToken: account.access_token!,
-          refreshToken: account.refresh_token!,
-          expiresAt: account.expires_at ?? undefined,
-        }
       }
       return token
     },

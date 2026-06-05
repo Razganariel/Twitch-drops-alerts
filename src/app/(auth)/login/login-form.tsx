@@ -39,7 +39,7 @@ export function LoginForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-xl">Connexion</CardTitle>
         <CardDescription>
-          Connectez-vous avec votre email ou via Twitch
+          Connectez-vous avec votre email
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,14 +66,6 @@ export function LoginForm() {
               {isPending ? "Connexion..." : "Se connecter"}
             </Button>
           </div>
-          <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-            <span className="relative z-10 bg-card px-2 text-muted-foreground">
-              Ou continuer avec
-            </span>
-          </div>
-          <Button variant="outline" className="w-full" asChild>
-            <Link href="/api/auth/twitch">Connexion avec Twitch</Link>
-          </Button>
           <div className="text-center text-sm">
             Pas encore de compte ?{" "}
             <Link href="/register" className="underline underline-offset-4">

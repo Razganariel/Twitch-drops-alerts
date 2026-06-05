@@ -1,17 +1,26 @@
-import type { TwitchConnection } from "@/generated/prisma/client"
+"use client"
+
+import { useActionState } from "react"
+import { saveTwitchCredentials } from "@/lib/actions/twitch"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-function isTokenExpired(expiresAt: Date) {
-  return expiresAt.getTime() < Date.now()
-}
+type TwitchConnectionData = {
+  clientId: string
+  twitchLogin: string | null
+  expiresAt: Date | null
+} | null
 
 export function TwitchConnectionCard({
   connection,
 }: {
-  connection: TwitchConnection | null
+  connection: TwitchConnectionData
 }) {
-  const expired = connection ? isTokenExpired(connection.expiresAt) : false
+  const [result, formAction, isPending] = useActionState(saveTwitchCredentials, null)
+  const isConnected = !!(connection?.twitchLogin)
 
   return (
     <Card>
@@ -20,34 +29,71 @@ export function TwitchConnectionCard({
           <div>
             <CardTitle>Twitch</CardTitle>
             <CardDescription>
-              {connection
+              {isConnected
                 ? `Connecté en tant que ${connection.twitchLogin}`
-                : "Non connecté"}
+                : connection?.clientId
+                  ? "Prêt à connecter"
+                  : "Non configuré"}
             </CardDescription>
           </div>
-          {connection && (
-            <Badge variant={expired ? "destructive" : "default"}>
-              {expired ? "Token expiré" : "Connecté"}
-            </Badge>
+          {isConnected && (
+            <Badge variant="default">Connecté</Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        {connection ? (
-          <div className="space-y-2 text-sm">
+      <CardContent className="space-y-4">
+        <form action={formAction} className="space-y-3">
+          <div className="grid gap-2">
+            <Label htmlFor="clientId">Client ID Twitch</Label>
+            <Input
+              id="clientId"
+              name="clientId"
+              defaultValue={connection?.clientId ?? ""}
+              placeholder="Ton Client ID Twitch"
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="clientSecret">Client Secret Twitch</Label>
+            <Input
+              id="clientSecret"
+              name="clientSecret"
+              type="password"
+              placeholder="Ton Client Secret Twitch"
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "Enregistrement..." : "Enregistrer les identifiants"}
+          </Button>
+          {result && (
+            <p className={`text-sm ${result.ok ? "text-emerald-600" : "text-destructive"}`}>
+              {result.message}
+            </p>
+          )}
+        </form>
+
+        {connection?.clientId && (
+          <div className="pt-2 border-t">
+            <Button variant="outline" className="w-full" asChild>
+              <a href="/api/connections/twitch/auth">
+                {isConnected ? "Reconnecter Twitch" : "Connecter Twitch"}
+              </a>
+            </Button>
+          </div>
+        )}
+
+        {isConnected && connection?.expiresAt && (
+          <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">ID Twitch</span>
-              <span>{connection.twitchId}</span>
+              <span className="text-muted-foreground">Connecté en tant que</span>
+              <span>{connection.twitchLogin}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Token expire le</span>
-              <span>{connection.expiresAt.toLocaleDateString()}</span>
+              <span>{new Date(connection.expiresAt).toLocaleDateString()}</span>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Connectez votre compte Twitch pour recevoir des alertes de drops.
-          </p>
         )}
       </CardContent>
     </Card>

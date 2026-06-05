@@ -2,15 +2,35 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { TwitchConnectionCard } from "./twitch-card"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SteamConnectionCard } from "./steam-card"
 
-export default async function ConnectionsPage() {
+const twitchMessages: Record<string, string> = {
+  success: "Connexion Twitch réussie",
+  error: "Connexion Twitch annulée",
+  missing_secret: "Client Secret Twitch manquant",
+  token_error: "Erreur lors de l'échange du token Twitch",
+}
+
+export default async function ConnectionsPage(props: {
+  searchParams?: Promise<{ twitch?: string }>
+}) {
   const session = await auth()
   if (!session?.user) redirect("/login")
 
-  const twitchConnection = await prisma.twitchConnection.findUnique({
-    where: { userId: session.user.id },
-  })
+  const searchParams = await props.searchParams
+  const twitchMessage = searchParams?.twitch ? twitchMessages[searchParams.twitch] : null
+
+  const [twitchConnection, steamConnection, userGamesCount] = await Promise.all([
+    prisma.twitchConnection.findUnique({
+      where: { userId: session.user.id },
+    }),
+    prisma.steamConnection.findUnique({
+      where: { userId: session.user.id },
+    }),
+    prisma.userGame.count({
+      where: { userId: session.user.id },
+    }),
+  ])
 
   return (
     <div className="space-y-6">
@@ -18,17 +38,33 @@ export default async function ConnectionsPage() {
       <p className="text-muted-foreground">
         Gérez vos connexions aux plateformes de jeux.
       </p>
-      <TwitchConnectionCard connection={twitchConnection} />
-      <Card>
-        <CardHeader>
-          <CardTitle>Steam</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            La connexion Steam sera disponible prochainement.
-          </p>
-        </CardContent>
-      </Card>
+      {twitchMessage && (
+        <p className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          {twitchMessage}
+        </p>
+      )}
+      <TwitchConnectionCard
+        connection={
+          twitchConnection
+            ? {
+                clientId: twitchConnection.clientId,
+                twitchLogin: twitchConnection.twitchLogin,
+                expiresAt: twitchConnection.expiresAt,
+              }
+            : null
+        }
+      />
+      <SteamConnectionCard
+        connection={
+          steamConnection
+            ? {
+                steamId: steamConnection.steamId,
+                lastSyncedAt: steamConnection.lastSyncedAt,
+                gameCount: userGamesCount,
+              }
+            : null
+        }
+      />
     </div>
   )
 }

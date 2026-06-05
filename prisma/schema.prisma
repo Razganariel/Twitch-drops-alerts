@@ -70,11 +70,13 @@ model VerificationToken {
 model TwitchConnection {
   id           String   @id @default(cuid())
   userId       String   @unique
-  twitchId     String
-  twitchLogin  String
-  accessToken  String
-  refreshToken String
-  expiresAt    DateTime
+  clientId     String
+  clientSecret String
+  twitchId     String?
+  twitchLogin  String?
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -1,19 +1,11 @@
 const TWITCH_API_BASE = "https://api.twitch.tv/helix"
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2"
 
-function getClientId() {
-  return process.env.TWITCH_CLIENT_ID ?? process.env.AUTH_TWITCH_ID ?? ""
-}
-
-function getClientSecret() {
-  return process.env.TWITCH_CLIENT_SECRET ?? process.env.AUTH_TWITCH_SECRET ?? ""
-}
-
-async function fetchWithToken(url: string, accessToken: string) {
+async function fetchWithToken(url: string, accessToken: string, clientId: string) {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Client-Id": getClientId(),
+      "Client-Id": clientId,
     },
   })
 
@@ -24,26 +16,71 @@ async function fetchWithToken(url: string, accessToken: string) {
   return response.json()
 }
 
-export async function getTwitchUserId(accessToken: string) {
-  const data = await fetchWithToken(`${TWITCH_API_BASE}/users`, accessToken)
-  return data.data?.[0] ?? null
+export function getTwitchAuthUrl(clientId: string, redirectUri: string, state: string) {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "user:read:email user:read:follows",
+    state,
+  })
+  return `${TWITCH_AUTH_BASE}/authorize?${params.toString()}`
 }
 
-export async function getActiveDrops(accessToken: string) {
-  const data = await fetchWithToken(
-    `${TWITCH_API_BASE}/drops/entitlements?fulfillment_statuses=ACTIVE`,
-    accessToken
-  )
-  return data.data ?? []
-}
-
-export async function refreshTwitchToken(refreshToken: string) {
+export async function exchangeTwitchCode(
+  code: string,
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string
+) {
   const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: getClientId(),
-      client_secret: getClientSecret(),
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      grant_type: "authorization_code",
+      redirect_uri: redirectUri,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to exchange Twitch code")
+  }
+
+  return response.json() as Promise<{
+    access_token: string
+    refresh_token: string
+    expires_in: number
+  }>
+}
+
+export async function getTwitchUserId(accessToken: string, clientId: string) {
+  const data = await fetchWithToken(`${TWITCH_API_BASE}/users`, accessToken, clientId)
+  return data.data?.[0] ?? null
+}
+
+export async function getActiveDrops(accessToken: string, clientId: string) {
+  const data = await fetchWithToken(
+    `${TWITCH_API_BASE}/drops/entitlements?fulfillment_statuses=ACTIVE`,
+    accessToken,
+    clientId
+  )
+  return data.data ?? []
+}
+
+export async function refreshTwitchToken(
+  refreshToken: string,
+  clientId: string,
+  clientSecret: string
+) {
+  const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }),
