@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { LogoutButton } from "./logout-button"
 
 export default async function DashboardLayout({
   children,
@@ -30,6 +31,9 @@ export default async function DashboardLayout({
             Connexions
           </Link>
         </nav>
+        <div className="mt-auto pt-4 border-t">
+          <LogoutButton />
+        </div>
       </aside>
       <main className="flex-1 p-8">{children}</main>
     </div>

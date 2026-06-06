@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 
-export function LoginForm() {
+export function LoginForm({ twitchEnabled }: { twitchEnabled: boolean }) {
   const router = useRouter()
   const [error, setError] = useState<string | undefined>()
   const [isPending, setIsPending] = useState(false)
@@ -39,7 +39,7 @@ export function LoginForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-xl">Connexion</CardTitle>
         <CardDescription>
-          Connectez-vous avec votre email
+          Connectez-vous avec votre email ou via Twitch
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,6 +66,19 @@ export function LoginForm() {
               {isPending ? "Connexion..." : "Se connecter"}
             </Button>
           </div>
+          <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
+            <span className="relative z-10 bg-card px-2 text-muted-foreground">
+              Ou continuer avec
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={!twitchEnabled}
+            onClick={() => signIn("twitch", { redirectTo: "/dashboard" })}
+          >
+            {twitchEnabled ? "Connexion avec Twitch" : "Twitch non configuré"}
+          </Button>
           <div className="text-center text-sm">
             Pas encore de compte ?{" "}
             <Link href="/register" className="underline underline-offset-4">

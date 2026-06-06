@@ -4,33 +4,6 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getFollowedStreams, refreshTwitchToken } from "@/services/twitch"
 
-export async function saveTwitchCredentials(
-  _prevState: { ok: boolean; message: string } | null,
-  formData: FormData
-) {
-  const session = await auth()
-  if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
-
-  const clientId = formData.get("clientId") as string
-  const clientSecret = formData.get("clientSecret") as string
-
-  if (!clientId || !clientSecret) {
-    return { ok: false, message: "Client ID et Client Secret requis" }
-  }
-
-  await prisma.twitchConnection.upsert({
-    where: { userId: session.user.id },
-    update: { clientId, clientSecret },
-    create: {
-      userId: session.user.id,
-      clientId,
-      clientSecret,
-    },
-  })
-
-  return { ok: true, message: "Identifiants Twitch enregistrés" }
-}
-
 export async function syncFollowedGames() {
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non authentifié" } as const
@@ -52,8 +25,8 @@ export async function syncFollowedGames() {
 
     const tokens = await refreshTwitchToken(
       connection.refreshToken,
-      connection.clientId,
-      connection.clientSecret
+      process.env.TWITCH_CLIENT_ID!,
+      process.env.TWITCH_CLIENT_SECRET!
     )
 
     accessToken = tokens.access_token
@@ -68,7 +41,7 @@ export async function syncFollowedGames() {
     })
   }
 
-  const streams = await getFollowedStreams(accessToken, connection.clientId)
+  const streams = await getFollowedStreams(accessToken, process.env.TWITCH_CLIENT_ID!)
 
   const seen = new Set<string>()
 

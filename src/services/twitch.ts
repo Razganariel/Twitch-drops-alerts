@@ -16,46 +16,6 @@ async function fetchWithToken(url: string, accessToken: string, clientId: string
   return response.json()
 }
 
-export function getTwitchAuthUrl(clientId: string, redirectUri: string, state: string) {
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: "user:read:email user:read:follows",
-    state,
-  })
-  return `${TWITCH_AUTH_BASE}/authorize?${params.toString()}`
-}
-
-export async function exchangeTwitchCode(
-  code: string,
-  clientId: string,
-  clientSecret: string,
-  redirectUri: string
-) {
-  const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code,
-      grant_type: "authorization_code",
-      redirect_uri: redirectUri,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to exchange Twitch code")
-  }
-
-  return response.json() as Promise<{
-    access_token: string
-    refresh_token: string
-    expires_in: number
-  }>
-}
-
 export async function getTwitchUserId(accessToken: string, clientId: string) {
   const data = await fetchWithToken(`${TWITCH_API_BASE}/users`, accessToken, clientId)
   return data.data?.[0] ?? null

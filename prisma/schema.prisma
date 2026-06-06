@@ -71,8 +71,6 @@ model VerificationToken {
 model TwitchConnection {
   id           String   @id @default(cuid())
   userId       String   @unique
-  clientId     String
-  clientSecret String
   twitchId     String?
   twitchLogin  String?
   accessToken  String?

@@ -1,5 +1,6 @@
 import NextAuth, { DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import Twitch from "next-auth/providers/twitch"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 
@@ -52,8 +53,41 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       },
     }),
+    Twitch({
+      clientId: process.env.TWITCH_CLIENT_ID!,
+      clientSecret: process.env.TWITCH_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: "openid user:read:email user:read:follows",
+        },
+      },
+    }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "twitch" && user.id) {
+        const twitchLogin = (profile as { preferred_username?: string })?.preferred_username
+        await prisma.twitchConnection.upsert({
+          where: { userId: user.id },
+          update: {
+            twitchId: account.providerAccountId,
+            twitchLogin: twitchLogin ?? "",
+            accessToken: account.access_token ?? undefined,
+            refreshToken: account.refresh_token ?? undefined,
+            expiresAt: account.expires_at ? new Date(account.expires_at * 1000) : undefined,
+          },
+          create: {
+            userId: user.id,
+            twitchId: account.providerAccountId,
+            twitchLogin: twitchLogin ?? "",
+            accessToken: account.access_token ?? undefined,
+            refreshToken: account.refresh_token ?? undefined,
+            expiresAt: account.expires_at ? new Date(account.expires_at * 1000) : undefined,
+          },
+        })
+      }
+      return true
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id!

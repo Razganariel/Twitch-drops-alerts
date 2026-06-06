@@ -50,9 +50,7 @@ export default async function ConnectionsPage(props: {
         connection={
           twitchConnection
             ? {
-                clientId: twitchConnection.clientId,
                 twitchLogin: twitchConnection.twitchLogin,
-                expiresAt: twitchConnection.expiresAt,
                 hasAccessToken: !!twitchConnection.accessToken,
                 followedGamesCount,
               }
