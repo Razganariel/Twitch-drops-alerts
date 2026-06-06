@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { alertQueue } from "@/lib/queue"
 
 function normalize(name: string) {
   return name.toLowerCase().trim()
@@ -10,6 +11,12 @@ function normalize(name: string) {
 export async function matchDrops() {
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non authentifié" } as const
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  })
+
+  if (!user?.email) return { ok: false, message: "Aucun email sur le compte" } as const
 
   const userGames = await prisma.userGame.findMany({
     where: { userId: session.user.id },
@@ -61,6 +68,18 @@ export async function matchDrops() {
         dropId: drop.id,
       },
     })
+
+    if (process.env.RESEND_API_KEY) {
+      await alertQueue.add("send-alert", {
+        userId: session.user.id,
+        email: user.email,
+        gameName: drop.gameName,
+        campaignName: drop.campaignName,
+        rewardName: drop.rewardName,
+        requiredMinutesWatched: drop.requiredMinutesWatched,
+        endAt: drop.endAt.toISOString(),
+      })
+    }
 
     matchCount++
   }
