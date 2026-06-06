@@ -20,7 +20,7 @@ export default async function ConnectionsPage(props: {
   const searchParams = await props.searchParams
   const twitchMessage = searchParams?.twitch ? twitchMessages[searchParams.twitch] : null
 
-  const [twitchConnection, steamConnection, userGamesCount, followedGamesCount] = await Promise.all([
+  const [twitchConnection, steamConnection, userGamesCount, followedGamesCount, activeDropsCount] = await Promise.all([
     prisma.twitchConnection.findUnique({
       where: { userId: session.user.id },
     }),
@@ -32,6 +32,9 @@ export default async function ConnectionsPage(props: {
     }),
     prisma.twitchFollowedGame.count({
       where: { userId: session.user.id },
+    }),
+    prisma.twitchDrop.count({
+      where: { isActive: true },
     }),
   ])
 
@@ -53,6 +56,7 @@ export default async function ConnectionsPage(props: {
                 twitchLogin: twitchConnection.twitchLogin,
                 hasAccessToken: !!twitchConnection.accessToken,
                 followedGamesCount,
+                activeDropsCount,
               }
             : null
         }
