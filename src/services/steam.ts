@@ -22,11 +22,19 @@ type ResolveVanityUrlResponse = {
 }
 
 export async function getSteamLibrary(steamId: string, apiKey: string) {
-  const url = `${STEAM_API_BASE}/ISteamUser/GetOwnedGames/v1?key=${apiKey}&steamid=${steamId}&include_appinfo=true&format=json`
+  const url = `${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v1?key=${apiKey}&steamid=${steamId}&include_appinfo=true&format=json`
 
   const response = await fetch(url)
   if (!response.ok) {
-    throw new Error(`Steam API error: ${response.status}`)
+    if (response.status === 403) {
+      throw new Error("Clé API Steam invalide ou révoquée")
+    }
+    if (response.status === 404) {
+      throw new Error(
+        "Profil Steam introuvable : vérifie l'ID et que ta bibliothèque de jeux est publique (Profil → Modifier profil → Confidentialité → Jeux → Public)"
+      )
+    }
+    throw new Error(`Erreur API Steam: ${response.status}`)
   }
 
   const data = (await response.json()) as GetOwnedGamesResponse
@@ -44,7 +52,12 @@ export async function resolveSteamVanityUrl(username: string, apiKey: string) {
   const data = (await response.json()) as ResolveVanityUrlResponse
 
   if (data.response.success !== 1) {
-    throw new Error(data.response.message ?? "Failed to resolve Steam username")
+    if (data.response.message === "No match") {
+      throw new Error(
+        "Aucun pseudo Steam personnalisé trouvé. Si tu n'as pas d'URL /id/..., utilise directement ton ID numérique Steam."
+      )
+    }
+    throw new Error(data.response.message ?? "Impossible de trouver ce profil Steam")
   }
 
   return data.response.steamid!

@@ -18,11 +18,19 @@ export async function connectSteam(
   if (!apiKey) return { ok: false, message: "Clé API Steam requise" }
 
   try {
-    const steamId = username
-      ? await resolveSteamVanityUrl(username, apiKey)
-      : steamIdInput
+    let steamId: string | null = null
 
-    if (!steamId) return { ok: false, message: "Steam ID ou pseudo requis" }
+    if (username) {
+      if (/^\d{17}$/.test(username.trim())) {
+        steamId = username.trim()
+      } else {
+        steamId = await resolveSteamVanityUrl(username, apiKey)
+      }
+    } else {
+      steamId = steamIdInput
+    }
+
+    if (!steamId) return { ok: false, message: username ? `Aucun profil Steam trouvé pour "${username}"` : "Pseudo ou ID Steam requis" }
 
     const games = await getSteamLibrary(steamId, apiKey)
 

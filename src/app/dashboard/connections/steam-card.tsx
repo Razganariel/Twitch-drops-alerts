@@ -83,12 +83,13 @@ export function SteamConnectionCard({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="username">Pseudo Steam (optionnel)</Label>
+              <Label htmlFor="username">Pseudo Steam ou ID Steam</Label>
               <Input
                 id="username"
                 name="username"
                 type="text"
-                placeholder="Votre pseudo Steam"
+                placeholder="Pseudo (dans /id/...) ou ID numérique à 17 chiffres"
+                required
               />
             </div>
             <Button type="submit" className="w-full" disabled={isPending}>
