@@ -20,6 +20,12 @@ declare module "@auth/core/jwt" {
   }
 }
 
+type TwitchProfile = {
+  sub?: string
+  preferred_username?: string
+  data?: Array<{ id: string; login: string; display_name: string; email?: string; profile_image_url?: string }>
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   adapter: PrismaAdapter(prisma),
@@ -56,6 +62,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Twitch({
       clientId: process.env.TWITCH_CLIENT_ID!,
       clientSecret: process.env.TWITCH_CLIENT_SECRET!,
+      checks: [],
+      allowDangerousEmailAccountLinking: true,
       authorization: {
         params: {
           scope: "openid user:read:email user:read:follows",
@@ -64,33 +72,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "twitch" && user.id) {
-        const twitchLogin = (profile as { preferred_username?: string })?.preferred_username
+    async jwt({ token, user, account, profile }) {
+      if (user) {
+        token.id = user.id!
+      }
+      if (account?.provider === "twitch" && user && profile) {
+        const p = profile as TwitchProfile
+        const twitchLogin = p.preferred_username ?? p.data?.[0]?.login ?? ""
         await prisma.twitchConnection.upsert({
-          where: { userId: user.id },
+          where: { userId: user.id as string },
           update: {
             twitchId: account.providerAccountId,
-            twitchLogin: twitchLogin ?? "",
+            twitchLogin,
             accessToken: account.access_token ?? undefined,
             refreshToken: account.refresh_token ?? undefined,
             expiresAt: account.expires_at ? new Date(account.expires_at * 1000) : undefined,
           },
           create: {
-            userId: user.id,
+            userId: user.id as string,
             twitchId: account.providerAccountId,
-            twitchLogin: twitchLogin ?? "",
+            twitchLogin,
             accessToken: account.access_token ?? undefined,
             refreshToken: account.refresh_token ?? undefined,
             expiresAt: account.expires_at ? new Date(account.expires_at * 1000) : undefined,
           },
         })
-      }
-      return true
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id!
       }
       return token
     },

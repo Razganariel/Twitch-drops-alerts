@@ -41,7 +41,7 @@ export async function syncFollowedGames() {
     })
   }
 
-  const streams = await getFollowedStreams(accessToken, process.env.TWITCH_CLIENT_ID!)
+  const streams = await getFollowedStreams(accessToken, process.env.TWITCH_CLIENT_ID!, connection.twitchId!)
 
   const seen = new Set<string>()
 

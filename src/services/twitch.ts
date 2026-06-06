@@ -10,7 +10,8 @@ async function fetchWithToken(url: string, accessToken: string, clientId: string
   })
 
   if (!response.ok) {
-    throw new Error(`Twitch API error: ${response.status} ${response.statusText}`)
+    const body = await response.text()
+    throw new Error(`Twitch API error: ${response.status} ${response.statusText} — ${body}`)
   }
 
   return response.json()
@@ -38,9 +39,10 @@ export type FollowedStream = {
 
 export async function getFollowedStreams(
   accessToken: string,
-  clientId: string
+  clientId: string,
+  userId: string
 ): Promise<FollowedStream[]> {
-  const url = `${TWITCH_API_BASE}/streams/followed?first=100`
+  const url = `${TWITCH_API_BASE}/streams/followed?user_id=${userId}&first=100`
   const data = await fetchWithToken(url, accessToken, clientId)
   return (data.data ?? []).map(
     (s: { game_id: string; game_name: string; thumbnail_url: string }) => ({
