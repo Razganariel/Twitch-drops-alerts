@@ -28,6 +28,7 @@ model User {
   twitchConnection TwitchConnection?
   steamConnection  SteamConnection?
   userGames        UserGame[]
+  twitchFollowedGames TwitchFollowedGame[]
   alerts           Alert[]
 }
 
@@ -109,6 +110,19 @@ model UserGame {
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@id([userId, gameId])
+}
+
+model TwitchFollowedGame {
+  id           String   @id @default(cuid())
+  userId       String
+  twitchGameId String
+  gameName     String
+  boxArtUrl    String?
+  followedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, twitchGameId])
 }
 
 model TwitchDrop {

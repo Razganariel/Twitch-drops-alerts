@@ -70,6 +70,27 @@ export async function getActiveDrops(accessToken: string, clientId: string) {
   return data.data ?? []
 }
 
+export type FollowedStream = {
+  gameId: string
+  gameName: string
+  thumbnailUrl: string
+}
+
+export async function getFollowedStreams(
+  accessToken: string,
+  clientId: string
+): Promise<FollowedStream[]> {
+  const url = `${TWITCH_API_BASE}/streams/followed?first=100`
+  const data = await fetchWithToken(url, accessToken, clientId)
+  return (data.data ?? []).map(
+    (s: { game_id: string; game_name: string; thumbnail_url: string }) => ({
+      gameId: s.game_id,
+      gameName: s.game_name,
+      thumbnailUrl: s.thumbnail_url,
+    })
+  )
+}
+
 export async function refreshTwitchToken(
   refreshToken: string,
   clientId: string,

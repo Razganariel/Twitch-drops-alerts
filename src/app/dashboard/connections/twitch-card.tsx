@@ -1,26 +1,28 @@
 "use client"
 
 import { useActionState } from "react"
-import { saveTwitchCredentials } from "@/lib/actions/twitch"
+import { saveTwitchCredentials, syncFollowedGames } from "@/lib/actions/twitch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-type TwitchConnectionData = {
-  clientId: string
-  twitchLogin: string | null
-  expiresAt: Date | null
-} | null
+type Props = {
+  connection: {
+    clientId: string
+    twitchLogin: string | null
+    expiresAt: Date | null
+    hasAccessToken: boolean
+    followedGamesCount: number
+  } | null
+}
 
-export function TwitchConnectionCard({
-  connection,
-}: {
-  connection: TwitchConnectionData
-}) {
-  const [result, formAction, isPending] = useActionState(saveTwitchCredentials, null)
+export function TwitchConnectionCard({ connection }: Props) {
+  const [credResult, credAction, credPending] = useActionState(saveTwitchCredentials, null)
+  const [syncResult, syncAction, syncPending] = useActionState(syncFollowedGames, null)
   const isConnected = !!(connection?.twitchLogin)
+  const canSync = !!connection?.hasAccessToken
 
   return (
     <Card>
@@ -42,7 +44,7 @@ export function TwitchConnectionCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form action={formAction} className="space-y-3">
+        <form action={credAction} className="space-y-3">
           <div className="grid gap-2">
             <Label htmlFor="clientId">Client ID Twitch</Label>
             <Input
@@ -63,12 +65,12 @@ export function TwitchConnectionCard({
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Enregistrement..." : "Enregistrer les identifiants"}
+          <Button type="submit" className="w-full" disabled={credPending}>
+            {credPending ? "Enregistrement..." : "Enregistrer les identifiants"}
           </Button>
-          {result && (
-            <p className={`text-sm ${result.ok ? "text-emerald-600" : "text-destructive"}`}>
-              {result.message}
+          {credResult && (
+            <p className={`text-sm ${credResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+              {credResult.message}
             </p>
           )}
         </form>
@@ -93,6 +95,28 @@ export function TwitchConnectionCard({
               <span className="text-muted-foreground">Token expire le</span>
               <span>{new Date(connection.expiresAt).toLocaleDateString()}</span>
             </div>
+          </div>
+        )}
+
+        {canSync && (
+          <div className="pt-2 border-t space-y-2">
+            {connection!.followedGamesCount > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {connection!.followedGamesCount} jeu{connection!.followedGamesCount > 1 ? "x" : ""} suivis sur Twitch
+              </p>
+            )}
+            <form action={syncAction}>
+              <Button variant="secondary" className="w-full" disabled={syncPending}>
+                {syncPending
+                  ? "Synchronisation..."
+                  : "Synchroniser mes jeux suivis"}
+              </Button>
+            </form>
+            {syncResult && (
+              <p className={`text-sm ${syncResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {syncResult.message}
+              </p>
+            )}
           </div>
         )}
       </CardContent>
