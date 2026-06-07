@@ -216,9 +216,16 @@ export async function syncActiveDrops() {
     data: { isActive: false },
   })
 
+  const seen = new Set<string>()
+  const unique = campaigns.filter((c) => {
+    if (seen.has(c.id)) return false
+    seen.add(c.id)
+    return true
+  })
+
   let count = 0
 
-  for (const campaign of campaigns) {
+  for (const campaign of unique) {
     if (!campaign.game) continue
 
     const firstDrop = campaign.timeBasedDrops?.[0]

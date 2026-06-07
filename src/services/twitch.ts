@@ -246,7 +246,7 @@ export async function getActiveDropCampaigns(
     ?.dropCampaigns as TwitchDropCampaign[] | undefined
 
   return (
-    campaigns?.filter((c) => c.status === "ACTIVE" && c.game) ?? []
+    campaigns?.filter((c) => c.status === "ACTIVE" && c.game && new Date(c.endAt) > new Date()) ?? []
   )
 }
 
