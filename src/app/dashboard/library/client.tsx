@@ -43,13 +43,13 @@ export function LibraryClient({ games }: Props) {
 
   return (
     <div className="min-h-0 flex-1 flex flex-col gap-4">
-      <div className="flex items-center justify-between shrink-0">
-        <h1 className="text-3xl font-bold">Bibliothèque Steam</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <h1 className="text-2xl sm:text-3xl font-bold">Bibliothèque Steam</h1>
         <span className="text-sm text-muted-foreground">{games.length} jeux</span>
       </div>
 
-      <div className="flex items-center justify-between gap-3 shrink-0">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+        <div className="relative flex-1 min-w-[200px] max-w-sm w-full sm:w-auto">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Rechercher un jeu..."
@@ -59,7 +59,7 @@ export function LibraryClient({ games }: Props) {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant={filterDemos ? "secondary" : "outline"}
             size="sm"

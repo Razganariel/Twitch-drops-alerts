@@ -56,7 +56,7 @@ export default async function SettingsPage(props: {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Paramètres</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
 
       {twitchMessage && (
         <p className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">

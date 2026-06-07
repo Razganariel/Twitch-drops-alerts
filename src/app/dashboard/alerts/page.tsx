@@ -44,7 +44,8 @@ function AlertTable({
 
   return (
     <div className="rounded-md border">
-      <table className="w-full text-sm">
+      {/* Desktop table */}
+      <table className="hidden md:table w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
             <th className="px-4 py-3 text-left font-medium">Date</th>
@@ -55,48 +56,74 @@ function AlertTable({
           </tr>
         </thead>
         <tbody>
-          {alerts.map((alert) => {
-            const isEnded = !alert.drop.isActive
-
-            return (
-              <tr key={alert.id} className="border-b last:border-0">
-                <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                  {formatDate(alert.sentAt)}
-                </td>
-                <td className={`px-4 py-3 font-medium ${isEnded ? "line-through text-muted-foreground" : ""}`}>
-                  {alert.game.name}
-                </td>
-                <td className={`px-4 py-3 ${isEnded ? "line-through text-muted-foreground" : ""}`}>
-                  <span>{alert.drop.campaignName}</span>
-                  {alert.drop.rewardName && (
-                    <span className="text-muted-foreground/60">
-                      {" — "}{alert.drop.rewardName}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {isEnded ? (
-                    <Badge variant="secondary">Terminée</Badge>
-                  ) : alert.status === "SENT" ? (
-                    <Badge variant="secondary">Non lue</Badge>
-                  ) : (
-                    <Badge variant="outline">Lue</Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {showActions && !isEnded && alert.status === "SENT" && (
-                    <form action={markAlertAsRead.bind(null, alert.id)}>
-                      <Button type="submit" variant="ghost" size="sm">
-                        Marquer comme lue
-                      </Button>
-                    </form>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
+          {alerts.map((alert) => (
+            <tr key={alert.id} className="border-b last:border-0">
+              <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                {formatDate(alert.sentAt)}
+              </td>
+              <td className={`px-4 py-3 font-medium ${!alert.drop.isActive ? "line-through text-muted-foreground" : ""}`}>
+                {alert.game.name}
+              </td>
+              <td className={`px-4 py-3 ${!alert.drop.isActive ? "line-through text-muted-foreground" : ""}`}>
+                <span>{alert.drop.campaignName}</span>
+                {alert.drop.rewardName && (
+                  <span className="text-muted-foreground/60">{" — "}{alert.drop.rewardName}</span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                {!alert.drop.isActive ? (
+                  <Badge variant="secondary">Terminée</Badge>
+                ) : alert.status === "SENT" ? (
+                  <Badge variant="secondary">Non lue</Badge>
+                ) : (
+                  <Badge variant="outline">Lue</Badge>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                {showActions && alert.drop.isActive && alert.status === "SENT" && (
+                  <form action={markAlertAsRead.bind(null, alert.id)}>
+                    <Button type="submit" variant="ghost" size="sm">Marquer comme lue</Button>
+                  </form>
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
+
+      {/* Mobile cards */}
+      <div className="divide-y md:hidden">
+        {alerts.map((alert) => (
+          <div key={alert.id} className="p-4 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className={`text-sm font-medium ${!alert.drop.isActive ? "line-through text-muted-foreground" : ""}`}>
+                  {alert.game.name}
+                </p>
+                <p className={`text-xs text-muted-foreground ${!alert.drop.isActive ? "line-through" : ""}`}>
+                  {alert.drop.campaignName}
+                  {alert.drop.rewardName && <> — {alert.drop.rewardName}</>}
+                </p>
+              </div>
+              {!alert.drop.isActive ? (
+                <Badge variant="secondary" className="shrink-0">Terminée</Badge>
+              ) : alert.status === "SENT" ? (
+                <Badge variant="secondary" className="shrink-0">Non lue</Badge>
+              ) : (
+                <Badge variant="outline" className="shrink-0">Lue</Badge>
+              )}
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{formatDate(alert.sentAt)}</span>
+              {showActions && alert.drop.isActive && alert.status === "SENT" && (
+                <form action={markAlertAsRead.bind(null, alert.id)}>
+                  <Button type="submit" variant="ghost" size="sm" className="h-7 text-xs">Marquer comme lue</Button>
+                </form>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -149,8 +176,8 @@ export default async function AlertsPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Alertes</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h1 className="text-2xl sm:text-3xl font-bold">Alertes</h1>
         {hasUnread && (
           <form action={markAllAlertsAsRead}>
             <Button type="submit" variant="outline" size="sm">

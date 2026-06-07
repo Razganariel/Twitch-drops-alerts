@@ -104,9 +104,9 @@ export default async function DashboardPage(props: {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
             Bienvenue, {session.user.name ?? session.user.email}
           </p>
@@ -122,7 +122,7 @@ export default async function DashboardPage(props: {
         steamLastSyncedAt={steamConn?.lastSyncedAt?.toISOString() ?? null}
       />
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2">
           <MatchSection
             hasSteam={!!steamConn}
