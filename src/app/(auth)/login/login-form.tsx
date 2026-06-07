@@ -53,11 +53,12 @@ export function LoginForm({ twitchEnabled }: { twitchEnabled: boolean }) {
                 type="email"
                 placeholder="m@example.com"
                 required
+                suppressHydrationWarning
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Mot de passe</Label>
-              <Input id="password" name="password" type="password" required />
+              <Input id="password" name="password" type="password" required suppressHydrationWarning />
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>

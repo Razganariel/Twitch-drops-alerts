@@ -18,12 +18,12 @@ export default async function DashboardLayout({
   })
 
   return (
-    <div className="flex min-h-svh">
+    <div className="flex h-svh overflow-hidden">
       <aside className="flex w-64 flex-col border-r bg-background p-4">
-        <Link href="/dashboard" className="mb-8 text-lg font-semibold">
+        <Link href="/dashboard" className="mb-8 text-lg font-semibold shrink-0">
           Twitch Drops
         </Link>
-        <nav className="flex flex-col gap-2">
+        <nav className="flex flex-col gap-2 overflow-y-auto">
           <Link
             href="/dashboard"
             className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
@@ -54,11 +54,11 @@ export default async function DashboardLayout({
             Paramètres
           </Link>
         </nav>
-        <div className="mt-auto pt-4 border-t">
+        <div className="mt-auto pt-4 border-t shrink-0">
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 p-8">{children}</main>
+      <main className="flex-1 overflow-y-auto p-8">{children}</main>
     </div>
   )
 }

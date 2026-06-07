@@ -23,17 +23,18 @@ type CampaignData = {
 }
 
 export default async function DashboardPage(props: {
-  searchParams?: Promise<{ view?: string }>
+  searchParams?: Promise<{ view?: string; filter?: string }>
 }) {
   const session = await auth()
   if (!session?.user) redirect("/login")
 
   const searchParams = await props.searchParams
   const view = searchParams?.view === "list" ? "list" : "grid"
+  const filter = searchParams?.filter === "all" ? "all" : "match"
 
   const userId = session.user.id
 
-  const [user, twitchConn, steamConn, activeDrops, totalAlerts, userGamesCount] =
+  const [user, twitchConn, steamConn, activeDrops, totalAlerts, userGames] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -50,13 +51,34 @@ export default async function DashboardPage(props: {
         orderBy: { endAt: "asc" },
       }),
       prisma.alert.count({ where: { userId } }),
-      prisma.alert.count({ where: { userId, status: "SENT" } }),
-      prisma.userGame.count({ where: { userId } }),
+      prisma.userGame.findMany({
+        where: { userId },
+        include: { game: true },
+      }),
     ])
 
   if (!user) redirect("/login")
 
-  const sorted = [...activeDrops].sort((a, b) => a.gameName.localeCompare(b.gameName))
+  const matchedNames = new Set(userGames.map((ug) => ug.game.name.toLowerCase().trim()))
+
+  function isMatch(name: string) {
+    return matchedNames.has(name.toLowerCase().trim())
+  }
+
+  let sorted = [...activeDrops]
+
+  if (filter === "match") {
+    sorted = sorted.filter((d) => isMatch(d.gameName))
+    sorted.sort((a, b) => a.gameName.localeCompare(b.gameName))
+  } else {
+    sorted.sort((a, b) => {
+      const aMatch = isMatch(a.gameName) ? 1 : 0
+      const bMatch = isMatch(b.gameName) ? 1 : 0
+      if (aMatch !== bMatch) return bMatch - aMatch
+      return a.gameName.localeCompare(b.gameName)
+    })
+  }
+
   const campaigns: CampaignData[] = sorted.map((drop) => ({
     id: drop.id,
     campaignId: drop.campaignId,
@@ -93,38 +115,65 @@ export default async function DashboardPage(props: {
         gqlConnected={!!twitchConn?.gqlAccessToken}
         steamConnected={!!steamConn}
         activeCampaigns={activeDrops.length}
-        syncedGames={userGamesCount}
+        syncedGames={userGames.length}
         steamLastSyncedAt={steamConn?.lastSyncedAt?.toISOString() ?? null}
       />
 
       <div className="flex items-center justify-between gap-4">
-        <MatchSection
-          hasSteam={!!steamConn}
-          hasTwitch={!!twitchConn?.accessToken}
-          alertCount={totalAlerts}
-        />
+        <div className="flex items-center gap-2">
+          <MatchSection
+            hasSteam={!!steamConn}
+            hasTwitch={!!twitchConn?.accessToken}
+            alertCount={totalAlerts}
+          />
+        </div>
 
-        <div className="flex items-center gap-1 rounded-md border p-0.5 shrink-0">
-          <Button
-            variant={view === "grid" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8 w-8 p-0"
-            asChild
-          >
-            <Link href="/dashboard?view=grid" title="Vue grille">
-              <LayoutGrid className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button
-            variant={view === "list" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8 w-8 p-0"
-            asChild
-          >
-            <Link href="/dashboard?view=list" title="Vue liste">
-              <List className="h-4 w-4" />
-            </Link>
-          </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 rounded-md border p-0.5">
+            <Button
+              variant={filter === "match" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-3 text-xs"
+              asChild
+            >
+              <Link href={`/dashboard?filter=match${view === "list" ? "&view=list" : ""}`}>
+                Matchs
+              </Link>
+            </Button>
+            <Button
+              variant={filter === "all" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-3 text-xs"
+              asChild
+            >
+              <Link href={`/dashboard?filter=all${view === "list" ? "&view=list" : ""}`}>
+                Toutes
+              </Link>
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1 rounded-md border p-0.5">
+            <Button
+              variant={view === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 w-8 p-0"
+              asChild
+            >
+              <Link href={`/dashboard?view=grid${filter === "all" ? "&filter=all" : ""}`} title="Vue grille">
+                <LayoutGrid className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              variant={view === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 w-8 p-0"
+              asChild
+            >
+              <Link href={`/dashboard?view=list${filter === "all" ? "&filter=all" : ""}`} title="Vue liste">
+                <List className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 

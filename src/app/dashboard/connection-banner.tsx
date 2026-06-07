@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CheckCircle2, XCircle } from "lucide-react"
 
 type Props = {
@@ -29,23 +29,23 @@ export function ConnectionBanner({
   syncedGames,
   steamLastSyncedAt,
 }: Props) {
-  const [{ steamSyncLabel }] = useState(() => {
-    const now = Date.now()
+  const [steamSyncLabel, setSteamSyncLabel] = useState("—")
 
-    const steamSyncAgo = steamLastSyncedAt
+  useEffect(() => {
+    const now = Date.now()
+    const ago = steamLastSyncedAt
       ? Math.floor((now - new Date(steamLastSyncedAt).getTime()) / 1000)
       : null
 
-    const stl = steamSyncAgo !== null
-      ? steamSyncAgo > 86400
-        ? `${Math.floor(steamSyncAgo / 86400)}j`
-        : steamSyncAgo > 3600
-          ? `${Math.floor(steamSyncAgo / 3600)}h`
-          : `${Math.floor(steamSyncAgo / 60)}min`
-      : "jamais"
-
-    return { steamSyncLabel: stl }
-  })
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSteamSyncLabel(ago !== null
+      ? ago > 86400
+        ? `${Math.floor(ago / 86400)}j`
+        : ago > 3600
+          ? `${Math.floor(ago / 3600)}h`
+          : `${Math.floor(ago / 60)}min`
+      : "jamais")
+  }, [steamLastSyncedAt])
 
   return (
     <div className="flex flex-wrap gap-3">
