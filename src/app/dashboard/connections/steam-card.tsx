@@ -1,12 +1,30 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState, useActionState } from "react"
 import { connectSteam } from "@/lib/actions/steam"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+
+const COOLDOWN_MS = 5 * 60 * 1000
+
+function useCooldown(key: string) {
+  const [remaining, setRemaining] = useState(() => {
+    if (typeof window === "undefined") return 0
+    const lastSync = Number(localStorage.getItem(key) || "0")
+    return lastSync ? Math.max(0, COOLDOWN_MS - (Date.now() - lastSync)) : 0
+  })
+
+  const markSynced = () => {
+    const now = Date.now()
+    localStorage.setItem(key, String(now))
+    setRemaining(COOLDOWN_MS)
+  }
+
+  return { isOnCooldown: remaining > 0, remaining, markSynced }
+}
 
 type SteamConnectionData = {
   steamId: string
@@ -20,6 +38,7 @@ export function SteamConnectionCard({
   connection: SteamConnectionData
 }) {
   const [result, formAction, isPending] = useActionState(connectSteam, null)
+  const cooldown = useCooldown("sync:steam")
 
   return (
     <Card>
@@ -53,7 +72,7 @@ export function SteamConnectionCard({
                 </div>
               )}
             </div>
-            <form action={formAction} className="space-y-3">
+            <form action={(formData) => { cooldown.markSynced(); formAction(formData) }} className="space-y-3">
               <input type="hidden" name="steamId" value={connection.steamId} />
               <div className="grid gap-2">
                 <Label htmlFor="apiKey">Clé API Steam</Label>
@@ -65,13 +84,20 @@ export function SteamConnectionCard({
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? "Synchronisation..." : "Synchroniser ma bibliothèque"}
+              <Button type="submit" className="w-full" disabled={isPending || cooldown.isOnCooldown}>
+                {isPending
+                  ? "Synchronisation..."
+                  : "Synchroniser ma bibliothèque"}
+                {cooldown.isOnCooldown && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    ({Math.ceil(cooldown.remaining / 60000)} min)
+                  </span>
+                )}
               </Button>
             </form>
           </div>
         ) : (
-          <form action={formAction} className="space-y-4">
+          <form action={(formData) => { cooldown.markSynced(); formAction(formData) }} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="apiKey">Clé API Steam</Label>
               <Input
@@ -92,8 +118,15 @@ export function SteamConnectionCard({
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Connexion..." : "Synchroniser ma bibliothèque"}
+            <Button type="submit" className="w-full" disabled={isPending || cooldown.isOnCooldown}>
+              {isPending
+                ? "Connexion..."
+                : "Synchroniser ma bibliothèque"}
+              {cooldown.isOnCooldown && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({Math.ceil(cooldown.remaining / 60000)} min)
+                </span>
+              )}
             </Button>
           </form>
         )}

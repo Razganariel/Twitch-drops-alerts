@@ -21,6 +21,7 @@ model User {
   password      String?
   timezone      String?
   checkInterval Int       @default(15)
+  lastMatchAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

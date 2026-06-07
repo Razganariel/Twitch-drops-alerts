@@ -7,6 +7,33 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
+const COOLDOWN_MS = 5 * 60 * 1000
+
+function useCooldown(key: string) {
+  const [remaining, setRemaining] = useState(() => {
+    if (typeof window === "undefined") return 0
+    const lastSync = Number(localStorage.getItem(key) || "0")
+    return lastSync ? Math.max(0, COOLDOWN_MS - (Date.now() - lastSync)) : 0
+  })
+
+  const markSynced = () => {
+    const now = Date.now()
+    localStorage.setItem(key, String(now))
+    setRemaining(COOLDOWN_MS)
+  }
+
+  return { isOnCooldown: remaining > 0, remaining, markSynced }
+}
+
+function CooldownIndicator({ remaining }: { remaining: number }) {
+  const minutes = Math.ceil(remaining / 60000)
+  return (
+    <span className="text-xs text-muted-foreground ml-2">
+      ({minutes} min)
+    </span>
+  )
+}
+
 type Props = {
   connection: {
     twitchLogin: string | null
@@ -21,6 +48,8 @@ export function TwitchConnectionCard({ connection }: Props) {
 
   const [fResult, fAction, fPending] = useActionState(syncFollowedGames, null)
   const [dResult, dAction, dPending] = useActionState(syncActiveDrops, null)
+  const followedCooldown = useCooldown("sync:twitch:followed")
+  const dropsCooldown = useCooldown("sync:twitch:drops")
 
   const [gql, setGql] = useState<{
     step: "idle" | "code" | "polling" | "done" | "error"
@@ -94,9 +123,14 @@ export function TwitchConnectionCard({ connection }: Props) {
                   {connection!.followedGamesCount > 1 ? "x" : ""} suivis sur Twitch
                 </p>
               )}
-              <form action={fAction}>
-                <Button variant="secondary" className="w-full" disabled={fPending}>
-                  {fPending ? "Synchronisation..." : "Synchroniser mes jeux suivis"}
+              <form action={() => { followedCooldown.markSynced(); fAction() }}>
+                <Button variant="secondary" className="w-full" disabled={fPending || followedCooldown.isOnCooldown}>
+                  {fPending
+                    ? "Synchronisation..."
+                    : "Synchroniser mes jeux suivis"}
+                  {followedCooldown.isOnCooldown && (
+                    <CooldownIndicator remaining={followedCooldown.remaining} />
+                  )}
                 </Button>
               </form>
               {fResult && (
@@ -147,10 +181,13 @@ export function TwitchConnectionCard({ connection }: Props) {
                   </p>
                 </div>
               ) : (
-                <form action={dAction}>
+                <form action={(formData) => { dropsCooldown.markSynced(); dAction(formData) }}>
                   <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
-                  <Button variant="secondary" className="w-full" disabled={dPending}>
+                  <Button variant="secondary" className="w-full" disabled={dPending || dropsCooldown.isOnCooldown}>
                     {dPending ? "Récupération..." : "Synchroniser les drops actifs"}
+                    {dropsCooldown.isOnCooldown && (
+                      <CooldownIndicator remaining={dropsCooldown.remaining} />
+                    )}
                   </Button>
                 </form>
               )}
