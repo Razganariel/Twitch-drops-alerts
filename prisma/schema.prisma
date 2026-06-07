@@ -128,6 +128,20 @@ model TwitchFollowedGame {
   @@unique([userId, twitchGameId])
 }
 
+model DropItem {
+  id                     String   @id @default(cuid())
+  twitchDropId           String
+  name                   String
+  rewardName             String?
+  rewardImageUrl         String?
+  requiredMinutesWatched Int?
+  sortOrder              Int      @default(0)
+
+  twitchDrop TwitchDrop @relation(fields: [twitchDropId], references: [id], onDelete: Cascade)
+
+  @@index([twitchDropId])
+}
+
 model TwitchDrop {
   id                     String   @id @default(cuid())
   campaignId             String   @unique
@@ -142,6 +156,7 @@ model TwitchDrop {
   isActive               Boolean  @default(true)
 
   alerts Alert[]
+  dropItems DropItem[]
 }
 
 model Alert {

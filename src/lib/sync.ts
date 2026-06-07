@@ -87,17 +87,16 @@ async function runPeriodicSync() {
 
   for (const campaign of unique) {
     if (!campaign.game) continue
-    const firstDrop = campaign.timeBasedDrops?.[0]
 
-    await prisma.twitchDrop.upsert({
+    const drop = await prisma.twitchDrop.upsert({
       where: { campaignId: campaign.id },
       update: {
         twitchGameId: campaign.game.id,
         gameName: campaign.game.displayName ?? campaign.game.name,
         gameBoxArtUrl: campaign.game.boxArtURL,
         campaignName: campaign.name,
-        rewardName: firstDrop?.reward?.name ?? firstDrop?.name,
-        requiredMinutesWatched: firstDrop?.requiredMinutesWatched ?? null,
+        rewardName: null,
+        requiredMinutesWatched: null,
         startAt: parseTwitchDate(campaign.startAt, "UTC"),
         endAt: parseTwitchDate(campaign.endAt, "UTC"),
         isActive: true,
@@ -108,13 +107,28 @@ async function runPeriodicSync() {
         gameName: campaign.game.displayName ?? campaign.game.name,
         gameBoxArtUrl: campaign.game.boxArtURL,
         campaignName: campaign.name,
-        rewardName: firstDrop?.reward?.name ?? firstDrop?.name,
-        requiredMinutesWatched: firstDrop?.requiredMinutesWatched ?? null,
+        rewardName: null,
+        requiredMinutesWatched: null,
         startAt: parseTwitchDate(campaign.startAt, "UTC"),
         endAt: parseTwitchDate(campaign.endAt, "UTC"),
         isActive: true,
       },
     })
+
+    await prisma.dropItem.deleteMany({ where: { twitchDropId: drop.id } })
+
+    if (campaign.timeBasedDrops) {
+      await prisma.dropItem.createMany({
+        data: campaign.timeBasedDrops.map((item, i) => ({
+          twitchDropId: drop.id,
+          name: item.name,
+          rewardName: item.reward?.name,
+          rewardImageUrl: item.reward?.imageURL,
+          requiredMinutesWatched: item.requiredMinutesWatched,
+          sortOrder: i,
+        })),
+      })
+    }
   }
 
   console.log(`[sync] ${unique.length} campagnes synchronisées`)
