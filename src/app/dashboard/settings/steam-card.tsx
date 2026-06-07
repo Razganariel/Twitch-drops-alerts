@@ -116,10 +116,8 @@ export function SteamConnectionCard({
         {result && !result.ok && (
           <p className="mt-3 text-sm text-destructive">{result.message}</p>
         )}
-        {result?.ok && (
-          <p className="mt-3 text-sm text-emerald-600">
-            {result.gameCount} jeux importés
-          </p>
+        {result?.ok && result.message && (
+          <p className="mt-3 text-sm text-emerald-600">{result.message}</p>
         )}
       </CardContent>
     </Card>

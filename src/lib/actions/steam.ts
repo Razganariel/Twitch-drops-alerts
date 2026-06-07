@@ -34,6 +34,16 @@ export async function connectSteam(
 
     const games = await getSteamLibrary(steamId, apiKey)
 
+    const existingSteamIds = new Set(
+      (await prisma.userGame.findMany({
+        where: { userId: session.user.id },
+        select: { game: { select: { steamAppId: true } } },
+      })).map((ug) => ug.game.steamAppId)
+    )
+
+    const beforeCount = existingSteamIds.size
+    const newGames = games.filter((g) => !existingSteamIds.has(g.appid))
+
     for (const game of games) {
       await prisma.game.upsert({
         where: { steamAppId: game.appid },
@@ -49,17 +59,13 @@ export async function connectSteam(
       })
     }
 
-    for (const game of games) {
+    for (const game of newGames) {
       const dbGame = await prisma.game.findUnique({
         where: { steamAppId: game.appid },
       })
       if (dbGame) {
-        await prisma.userGame.upsert({
-          where: {
-            userId_gameId: { userId: session.user.id, gameId: dbGame.id },
-          },
-          update: {},
-          create: { userId: session.user.id, gameId: dbGame.id },
+        await prisma.userGame.create({
+          data: { userId: session.user.id, gameId: dbGame.id },
         })
       }
     }
@@ -79,7 +85,13 @@ export async function connectSteam(
       },
     })
 
-    return { ok: true, message: "Bibliothèque synchronisée", gameCount: games.length }
+    const newCount = newGames.length
+    const message = beforeCount === 0
+      ? `${games.length} jeux importés`
+      : newCount > 0
+        ? `${newCount} nouveau${newCount > 1 ? "x" : ""} importé${newCount > 1 ? "s" : ""}`
+        : "Aucun nouveau jeu"
+    return { ok: true, message, gameCount: games.length }
   } catch (error) {
     return {
       ok: false,
