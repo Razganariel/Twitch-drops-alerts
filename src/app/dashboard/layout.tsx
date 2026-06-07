@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { prisma } from "@/lib/prisma"
+import { Badge } from "@/components/ui/badge"
 import { LogoutButton } from "./logout-button"
 
 export default async function DashboardLayout({
@@ -10,6 +12,10 @@ export default async function DashboardLayout({
 }) {
   const session = await auth()
   if (!session?.user) redirect("/login")
+
+  const unreadCount = await prisma.alert.count({
+    where: { userId: session.user.id, status: "SENT" },
+  })
 
   return (
     <div className="flex min-h-svh">
@@ -29,6 +35,17 @@ export default async function DashboardLayout({
             className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
           >
             Connexions
+          </Link>
+          <Link
+            href="/dashboard/alerts"
+            className="flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <span>Alertes</span>
+            {unreadCount > 0 && (
+              <Badge variant="secondary" className="ml-auto">
+                {unreadCount}
+              </Badge>
+            )}
           </Link>
         </nav>
         <div className="mt-auto pt-4 border-t">

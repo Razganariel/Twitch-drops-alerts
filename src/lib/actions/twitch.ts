@@ -194,7 +194,7 @@ export async function syncActiveDrops(
     data: { timezone },
   })
 
-  let gqlToken = await getValidGqlToken(session.user.id)
+      const gqlToken = await getValidGqlToken(session.user.id)
 
   if (!gqlToken) {
     return {
