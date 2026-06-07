@@ -29,11 +29,16 @@ export function LibraryClient({ games }: Props) {
   const allEnabled = games.filter((g) => !g.deletedAt).every((g) => g.isAlertEnabled) && games.filter((g) => !g.deletedAt).length > 0
 
   const shown = games.filter((g) => {
-    if (search && !g.name.toLowerCase().includes(search.toLowerCase())) return false
-    if (filterDemos && !g.name.toLowerCase().includes("demo")) return false
-    if (filterPlaytests && !g.name.toLowerCase().includes("playtest")) return false
-    if (!filterDeleted && g.deletedAt) return false
-    return true
+    const searchMatch = !search || g.name.toLowerCase().includes(search.toLowerCase())
+    if (!searchMatch) return false
+
+    const conditions: boolean[] = []
+    if (filterDemos) conditions.push(g.name.toLowerCase().includes("demo"))
+    if (filterPlaytests) conditions.push(g.name.toLowerCase().includes("playtest"))
+    if (filterDeleted) conditions.push(!!g.deletedAt)
+
+    if (conditions.length === 0) return !g.deletedAt
+    return conditions.some(Boolean)
   })
 
   return (
