@@ -29,22 +29,25 @@ export function ConnectionBanner({
   syncedGames,
   steamLastSyncedAt,
 }: Props) {
-  const [steamSyncLabel, setSteamSyncLabel] = useState("—")
-
+  const [steamSyncLabel, setSteamSyncLabel] = useState("")
   useEffect(() => {
-    const now = Date.now()
-    const ago = steamLastSyncedAt
-      ? Math.floor((now - new Date(steamLastSyncedAt).getTime()) / 1000)
-      : null
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSteamSyncLabel(ago !== null
-      ? ago > 86400
-        ? `${Math.floor(ago / 86400)}j`
-        : ago > 3600
-          ? `${Math.floor(ago / 3600)}h`
-          : `${Math.floor(ago / 60)}min`
-      : "jamais")
+    const update = () => {
+      if (!steamLastSyncedAt) {
+        setSteamSyncLabel("jamais")
+        return
+      }
+      const ago = Math.floor((Date.now() - new Date(steamLastSyncedAt).getTime()) / 1000)
+      setSteamSyncLabel(
+        ago > 86400
+          ? `${Math.floor(ago / 86400)}j`
+          : ago > 3600
+            ? `${Math.floor(ago / 3600)}h`
+            : `${Math.floor(ago / 60)}min`
+      )
+    }
+    update()
+    const id = setInterval(update, 60000)
+    return () => clearInterval(id)
   }, [steamLastSyncedAt])
 
   return (

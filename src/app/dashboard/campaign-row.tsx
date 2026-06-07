@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Bell, BellOff, BellRing, Mail, MailCheck, ChevronDown, ChevronUp, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
+import { CampaignProgress } from "@/components/shared/campaign-progress"
 import { markAlertAsRead } from "@/lib/actions/alerts"
 
 type AlertInfo = {
@@ -34,27 +34,6 @@ type Campaign = {
 
 type Props = {
   campaign: Campaign
-}
-
-function CampaignProgress({ startAt, endAt }: { startAt: string; endAt: string }) {
-  const [pct, setPct] = useState(0)
-
-  useEffect(() => {
-    const now = Date.now()
-    const start = new Date(startAt).getTime()
-    const end = new Date(endAt).getTime()
-    const total = end - start
-    const elapsed = now - start
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPct(total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0)
-  }, [startAt, endAt])
-
-  return (
-    <div className="flex items-center gap-2">
-      <Progress value={pct} className="h-1.5 w-24" />
-      <span className="text-xs text-muted-foreground whitespace-nowrap">{Math.round(pct)}%</span>
-    </div>
-  )
 }
 
 export function CampaignRow({ campaign }: Props) {

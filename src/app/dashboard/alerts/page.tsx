@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@/generated/prisma/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { markAlertAsRead, markAllAlertsAsRead } from "@/lib/actions/alerts"
@@ -110,24 +111,30 @@ export default async function AlertsPage(props: {
   const statusFilter = searchParams?.status ?? "ALL"
   const page = Math.max(1, Number(searchParams?.page ?? "1"))
 
-  const where: Record<string, unknown> = { userId: session.user.id }
-  if (statusFilter === "SENT") where.status = "SENT"
-  else if (statusFilter === "READ") where.status = "READ"
+  const whereBase: Prisma.AlertWhereInput = { userId: session.user.id }
+  let statusWhere: Prisma.AlertWhereInput = {}
+  if (statusFilter === "SENT") statusWhere = { status: "SENT" }
+  else if (statusFilter === "READ") statusWhere = { status: "READ" }
+  const where = { ...whereBase, ...statusWhere }
 
-  const [allAlerts, totalCount, endedCount] = await Promise.all([
+  const [activeAlerts, endedAlerts, activeCount, endedCount] = await Promise.all([
     prisma.alert.findMany({
-      where,
+      where: { ...where, drop: { isActive: true } },
+      include: { game: true, drop: true },
+      orderBy: { sentAt: "desc" },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+    prisma.alert.findMany({
+      where: { ...where, drop: { isActive: false } },
       include: { game: true, drop: true },
       orderBy: { sentAt: "desc" },
     }),
-    prisma.alert.count({ where }),
+    prisma.alert.count({ where: { ...where, drop: { isActive: true } } }),
     prisma.alert.count({ where: { ...where, drop: { isActive: false } } }),
   ])
 
-  const activeAlerts = allAlerts.filter((a) => a.drop.isActive)
-  const endedAlerts = allAlerts.filter((a) => !a.drop.isActive)
-
-  const totalPages = Math.ceil(totalCount / PER_PAGE)
+  const totalPages = Math.ceil(activeCount / PER_PAGE)
   const hasUnread = statusFilter !== "READ"
 
   function buildUrl(status: string, p?: number) {
@@ -139,8 +146,6 @@ export default async function AlertsPage(props: {
   }
 
   const statusLinks = ["ALL", "SENT", "READ"] as const
-
-  const paginatedActive = activeAlerts.slice(0, PER_PAGE)
 
   return (
     <div className="space-y-6">
@@ -177,8 +182,8 @@ export default async function AlertsPage(props: {
       {activeAlerts.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">En cours</h2>
-          <AlertTable alerts={paginatedActive} showActions />
-          {activeAlerts.length > PER_PAGE && (
+          <AlertTable alerts={activeAlerts} showActions />
+          {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               {page > 1 && (
                 <Link
@@ -214,7 +219,7 @@ export default async function AlertsPage(props: {
         </section>
       )}
 
-      {allAlerts.length === 0 && (
+      {activeAlerts.length === 0 && endedAlerts.length === 0 && (
         <p className="text-sm text-muted-foreground">Aucune alerte trouvée.</p>
       )}
     </div>

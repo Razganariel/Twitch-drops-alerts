@@ -252,8 +252,8 @@ export async function getActiveDropCampaigns(
     )
   }
 
-  const campaigns = (json.data?.currentUser as Record<string, unknown>)
-    ?.dropCampaigns as TwitchDropCampaign[] | undefined
+  type GqlResponse = { data?: { currentUser?: { dropCampaigns?: TwitchDropCampaign[] } } }
+  const campaigns = (json as GqlResponse).data?.currentUser?.dropCampaigns
 
   return (
     campaigns?.filter((c) => c.status === "ACTIVE" && c.game && new Date(c.endAt) > new Date()) ?? []

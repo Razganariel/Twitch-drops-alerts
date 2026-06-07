@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { Queue, Worker } from "bullmq"
 import { getActiveDropCampaigns, getDropCampaignDetails } from "../services/twitch"
 import { parseTwitchDate } from "./timezone"
+import { normalize } from "./utils"
 import { alertQueue } from "./queue"
 
 const REDIS_URL = process.env.REDIS_URL || "redis://192.168.1.222:6379"
@@ -16,10 +17,6 @@ const redisConnection = {
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 })
-
-function normalize(name: string) {
-  return name.toLowerCase().trim()
-}
 
 async function runPeriodicSync() {
   console.log("[sync] Début de la synchronisation planifiée")
@@ -134,18 +131,20 @@ async function runPeriodicSync() {
     await prisma.dropItem.deleteMany({ where: { twitchDropId: drop.id } })
 
     if (items.length > 0) {
-      for (const item of items) {
-        await prisma.dropItem.create({
+      await prisma.$transaction(
+        items.map((item, i) =>
+          prisma.dropItem.create({
           data: {
             twitchDropId: drop.id,
             name: item.name,
             rewardName: item.benefitEdges?.[0]?.benefit?.name ?? item.reward?.name ?? null,
             rewardImageUrl: item.benefitEdges?.[0]?.benefit?.imageAssetURL ?? item.benefitEdges?.[0]?.benefit?.imageURL ?? item.reward?.imageURL ?? null,
             requiredMinutesWatched: item.requiredMinutesWatched ?? null,
-            sortOrder: 0,
+            sortOrder: i,
           },
         })
-      }
+      )
+      )
     } else {
       await prisma.dropItem.create({
         data: {

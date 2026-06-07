@@ -3,10 +3,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { alertQueue } from "@/lib/queue"
-
-function normalize(name: string) {
-  return name.toLowerCase().trim()
-}
+import { normalize } from "@/lib/utils"
 
 export async function matchDrops() {
   const session = await auth()
