@@ -42,11 +42,7 @@ export async function matchDrops() {
 
     const matchedGame = userGames.find((ug) => {
       const gameName = normalize(ug.game.name)
-      return (
-        gameName === dropGameName ||
-        gameName.includes(dropGameName) ||
-        dropGameName.includes(gameName)
-      )
+      return gameName === dropGameName
     })
 
     if (!matchedGame) continue
