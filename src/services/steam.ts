@@ -22,7 +22,7 @@ type ResolveVanityUrlResponse = {
 }
 
 export async function getSteamLibrary(steamId: string, apiKey: string) {
-  const url = `${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v1?key=${apiKey}&steamid=${steamId}&include_appinfo=true&format=json`
+  const url = `${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v1?key=${apiKey}&steamid=${steamId}&include_appinfo=true&include_played_free_games=true&include_free_sub=true&format=json`
 
   const response = await fetch(url)
   if (!response.ok) {
