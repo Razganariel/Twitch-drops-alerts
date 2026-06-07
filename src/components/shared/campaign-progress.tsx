@@ -40,7 +40,7 @@ export function CampaignProgress({
 
   return (
     <div className="flex items-center gap-2">
-      <Progress value={pct} className="h-1.5 w-24" />
+      <Progress value={pct} className="h-1.5 w-24 max-sm:hidden" />
       <span className="text-xs text-muted-foreground whitespace-nowrap">{Math.round(pct)}%</span>
     </div>
   )
