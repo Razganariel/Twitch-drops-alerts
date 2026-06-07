@@ -142,7 +142,17 @@ export type TwitchDropCampaign = {
   timeBasedDrops?: Array<{
     id: string
     name: string
+    startAt: string
+    endAt: string
     requiredMinutesWatched: number
+    benefitEdges?: Array<{
+      benefit: {
+        id: string
+        name: string
+        imageAssetURL?: string
+        imageURL?: string
+      }
+    }>
     reward?: { id: string; name: string; imageURL?: string }
   }>
   self?: { isAccountConnected: boolean }
@@ -233,7 +243,7 @@ export async function getActiveDropCampaigns(
     accessToken,
     "ViewerDropsDashboard",
     "5a4da2ab3d5b47c9f9ce864e727b2cb346af1e3ea8b897fe8f704a97ff017619",
-    { fetchRewardCampaigns: false }
+    { fetchRewardCampaigns: true }
   )
 
   if (json.errors) {
@@ -248,6 +258,24 @@ export async function getActiveDropCampaigns(
   return (
     campaigns?.filter((c) => c.status === "ACTIVE" && c.game && new Date(c.endAt) > new Date()) ?? []
   )
+}
+
+export async function getDropCampaignDetails(
+  accessToken: string,
+  campaignId: string,
+  channelLogin: string
+): Promise<TwitchDropCampaign | null> {
+  const json = await fetchGQL(
+    accessToken,
+    "DropCampaignDetails",
+    "039277bf98f3130929262cc7c6efd9c141ca3749cb6dca442fc8ead9a53f77c1",
+    { channelLogin, dropID: campaignId }
+  )
+
+  if (json.errors) return null
+
+  const data = json as { data?: { user?: { dropCampaign?: TwitchDropCampaign } } }
+  return data?.data?.user?.dropCampaign ?? null
 }
 
 export async function refreshTwitchToken(

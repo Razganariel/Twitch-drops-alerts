@@ -6,6 +6,7 @@ import { parseTwitchDate } from "@/lib/timezone"
 import {
   getFollowedStreams,
   getActiveDropCampaigns,
+  getDropCampaignDetails,
   refreshTwitchToken,
   startDeviceFlow,
   pollDeviceFlow,
@@ -194,7 +195,18 @@ export async function syncActiveDrops(
     data: { timezone },
   })
 
-      const gqlToken = await getValidGqlToken(session.user.id)
+  const gqlConnection = await prisma.twitchConnection.findUnique({
+    where: { userId: session.user.id },
+    select: {
+      twitchLogin: true,
+      gqlAccessToken: true,
+      gqlRefreshToken: true,
+      gqlTokenExpiresAt: true,
+    },
+  })
+
+  const gqlToken = await getValidGqlToken(session.user.id)
+  const twitchLogin = gqlConnection?.twitchLogin ?? null
 
   if (!gqlToken) {
     return {
@@ -239,6 +251,21 @@ export async function syncActiveDrops(
   for (const campaign of unique) {
     if (!campaign.game) continue
 
+    let items = campaign.timeBasedDrops ?? []
+
+    if (items.length === 0 && twitchLogin) {
+      try {
+        const details = await getDropCampaignDetails(gqlToken, campaign.id, twitchLogin)
+        if (details?.timeBasedDrops) {
+          items = details.timeBasedDrops
+        }
+      } catch {
+        console.log("[sync] Échec détail campagne", campaign.name)
+      }
+    }
+
+    const firstItem = items[0]
+
     const drop = await prisma.twitchDrop.upsert({
       where: { campaignId: campaign.id },
       update: {
@@ -246,8 +273,8 @@ export async function syncActiveDrops(
         gameName: campaign.game.displayName ?? campaign.game.name,
         gameBoxArtUrl: campaign.game.boxArtURL,
         campaignName: campaign.name,
-        rewardName: null,
-        requiredMinutesWatched: null,
+        rewardName: firstItem?.benefitEdges?.[0]?.benefit?.name ?? firstItem?.reward?.name ?? firstItem?.name ?? null,
+        requiredMinutesWatched: firstItem?.requiredMinutesWatched ?? null,
         startAt: parseTwitchDate(campaign.startAt, timezone),
         endAt: parseTwitchDate(campaign.endAt, timezone),
         isActive: true,
@@ -258,8 +285,8 @@ export async function syncActiveDrops(
         gameName: campaign.game.displayName ?? campaign.game.name,
         gameBoxArtUrl: campaign.game.boxArtURL,
         campaignName: campaign.name,
-        rewardName: null,
-        requiredMinutesWatched: null,
+        rewardName: firstItem?.benefitEdges?.[0]?.benefit?.name ?? firstItem?.reward?.name ?? firstItem?.name ?? null,
+        requiredMinutesWatched: firstItem?.requiredMinutesWatched ?? null,
         startAt: parseTwitchDate(campaign.startAt, timezone),
         endAt: parseTwitchDate(campaign.endAt, timezone),
         isActive: true,
@@ -268,16 +295,31 @@ export async function syncActiveDrops(
 
     await prisma.dropItem.deleteMany({ where: { twitchDropId: drop.id } })
 
-    if (campaign.timeBasedDrops) {
-      await prisma.dropItem.createMany({
-        data: campaign.timeBasedDrops.map((item, i) => ({
+    if (items.length > 0) {
+      await prisma.$transaction(
+        items.map((item, i) =>
+          prisma.dropItem.create({
+            data: {
+              twitchDropId: drop.id,
+              name: item.name,
+              rewardName: item.benefitEdges?.[0]?.benefit?.name ?? item.reward?.name ?? null,
+              rewardImageUrl: item.benefitEdges?.[0]?.benefit?.imageAssetURL ?? item.benefitEdges?.[0]?.benefit?.imageURL ?? item.reward?.imageURL ?? null,
+              requiredMinutesWatched: item.requiredMinutesWatched ?? null,
+              sortOrder: i,
+            },
+          })
+        )
+      )
+    } else {
+      await prisma.dropItem.create({
+        data: {
           twitchDropId: drop.id,
-          name: item.name,
-          rewardName: item.reward?.name,
-          rewardImageUrl: item.reward?.imageURL,
-          requiredMinutesWatched: item.requiredMinutesWatched,
-          sortOrder: i,
-        })),
+          name: campaign.name,
+          rewardName: firstItem?.benefitEdges?.[0]?.benefit?.name ?? firstItem?.reward?.name ?? firstItem?.name ?? campaign.name,
+          rewardImageUrl: firstItem?.benefitEdges?.[0]?.benefit?.imageAssetURL ?? firstItem?.benefitEdges?.[0]?.benefit?.imageURL ?? firstItem?.reward?.imageURL ?? null,
+          requiredMinutesWatched: firstItem?.requiredMinutesWatched ?? null,
+          sortOrder: 0,
+        },
       })
     }
 

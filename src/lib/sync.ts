@@ -1,7 +1,7 @@
 import { PrismaClient } from "../generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { Queue, Worker } from "bullmq"
-import { getActiveDropCampaigns } from "../services/twitch"
+import { getActiveDropCampaigns, getDropCampaignDetails } from "../services/twitch"
 import { parseTwitchDate } from "./timezone"
 import { alertQueue } from "./queue"
 
@@ -60,6 +60,7 @@ async function runPeriodicSync() {
   }
 
   const firstGqlToken = dueUsers[0].twitchConnection?.gqlAccessToken
+  const firstTwitchLogin = dueUsers[0].twitchConnection?.twitchLogin ?? null
   if (!firstGqlToken) {
     console.log("[sync] Aucun token GQL disponible")
     return { ok: false, count: 0 }
@@ -88,6 +89,21 @@ async function runPeriodicSync() {
   for (const campaign of unique) {
     if (!campaign.game) continue
 
+    let items = campaign.timeBasedDrops ?? []
+
+    if (items.length === 0 && firstGqlToken && firstTwitchLogin) {
+      try {
+        const details = await getDropCampaignDetails(firstGqlToken, campaign.id, firstTwitchLogin)
+        if (details?.timeBasedDrops) {
+          items = details.timeBasedDrops
+        }
+      } catch {
+        console.log("[sync] Échec détail campagne", campaign.name)
+      }
+    }
+
+    const firstItem = items[0]
+
     const drop = await prisma.twitchDrop.upsert({
       where: { campaignId: campaign.id },
       update: {
@@ -95,8 +111,8 @@ async function runPeriodicSync() {
         gameName: campaign.game.displayName ?? campaign.game.name,
         gameBoxArtUrl: campaign.game.boxArtURL,
         campaignName: campaign.name,
-        rewardName: null,
-        requiredMinutesWatched: null,
+        rewardName: firstItem?.benefitEdges?.[0]?.benefit?.name ?? firstItem?.reward?.name ?? firstItem?.name ?? null,
+        requiredMinutesWatched: firstItem?.requiredMinutesWatched ?? null,
         startAt: parseTwitchDate(campaign.startAt, "UTC"),
         endAt: parseTwitchDate(campaign.endAt, "UTC"),
         isActive: true,
@@ -107,8 +123,8 @@ async function runPeriodicSync() {
         gameName: campaign.game.displayName ?? campaign.game.name,
         gameBoxArtUrl: campaign.game.boxArtURL,
         campaignName: campaign.name,
-        rewardName: null,
-        requiredMinutesWatched: null,
+        rewardName: firstItem?.benefitEdges?.[0]?.benefit?.name ?? firstItem?.reward?.name ?? firstItem?.name ?? null,
+        requiredMinutesWatched: firstItem?.requiredMinutesWatched ?? null,
         startAt: parseTwitchDate(campaign.startAt, "UTC"),
         endAt: parseTwitchDate(campaign.endAt, "UTC"),
         isActive: true,
@@ -117,16 +133,29 @@ async function runPeriodicSync() {
 
     await prisma.dropItem.deleteMany({ where: { twitchDropId: drop.id } })
 
-    if (campaign.timeBasedDrops) {
-      await prisma.dropItem.createMany({
-        data: campaign.timeBasedDrops.map((item, i) => ({
+    if (items.length > 0) {
+      for (const item of items) {
+        await prisma.dropItem.create({
+          data: {
+            twitchDropId: drop.id,
+            name: item.name,
+            rewardName: item.benefitEdges?.[0]?.benefit?.name ?? item.reward?.name ?? null,
+            rewardImageUrl: item.benefitEdges?.[0]?.benefit?.imageAssetURL ?? item.benefitEdges?.[0]?.benefit?.imageURL ?? item.reward?.imageURL ?? null,
+            requiredMinutesWatched: item.requiredMinutesWatched ?? null,
+            sortOrder: 0,
+          },
+        })
+      }
+    } else {
+      await prisma.dropItem.create({
+        data: {
           twitchDropId: drop.id,
-          name: item.name,
-          rewardName: item.reward?.name,
-          rewardImageUrl: item.reward?.imageURL,
-          requiredMinutesWatched: item.requiredMinutesWatched,
-          sortOrder: i,
-        })),
+          name: campaign.name,
+          rewardName: firstItem?.benefitEdges?.[0]?.benefit?.name ?? firstItem?.reward?.name ?? firstItem?.name ?? campaign.name,
+          rewardImageUrl: firstItem?.benefitEdges?.[0]?.benefit?.imageAssetURL ?? firstItem?.benefitEdges?.[0]?.benefit?.imageURL ?? firstItem?.reward?.imageURL ?? null,
+          requiredMinutesWatched: firstItem?.requiredMinutesWatched ?? null,
+          sortOrder: 0,
+        },
       })
     }
   }
