@@ -31,12 +31,6 @@ export default async function DashboardLayout({
             Dashboard
           </Link>
           <Link
-            href="/dashboard/connections"
-            className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Connexions
-          </Link>
-          <Link
             href="/dashboard/alerts"
             className="flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
           >

@@ -109,7 +109,7 @@ export function TwitchConnectionCard({ connection }: Props) {
         <Button
           variant={isConnected ? "outline" : "default"}
           className="w-full"
-          onClick={() => signIn("twitch", { redirectTo: "/dashboard/connections" })}
+          onClick={() => signIn("twitch", { redirectTo: "/dashboard/settings" })}
         >
           {isConnected ? "Reconnecter Twitch" : "Connecter Twitch"}
         </Button>
