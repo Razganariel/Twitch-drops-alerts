@@ -90,9 +90,11 @@ export function CampaignRow({ campaign }: Props) {
           {campaign.dropItems.length}
         </Badge>
 
-        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
+        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline whitespace-nowrap">
           <Clock className="h-3 w-3 inline mr-1" />
           {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+          {" → "}
+          {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
         </span>
 
         <CampaignProgress startAt={campaign.startAt} endAt={campaign.endAt} />
