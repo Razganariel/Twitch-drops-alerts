@@ -103,18 +103,31 @@ async function getValidGqlToken(userId: string) {
   if (connection.gqlTokenExpiresAt && connection.gqlTokenExpiresAt < new Date()) {
     if (!connection.gqlRefreshToken) return null
 
-    const tokens = await refreshGqlToken(connection.gqlRefreshToken)
+    try {
+      const tokens = await refreshGqlToken(connection.gqlRefreshToken)
 
-    gqlAccessToken = tokens.access_token
+      gqlAccessToken = tokens.access_token
 
-    await prisma.twitchConnection.update({
-      where: { userId },
-      data: {
-        gqlAccessToken: tokens.access_token,
-        gqlRefreshToken: tokens.refresh_token,
-        gqlTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
-      },
-    })
+      await prisma.twitchConnection.update({
+        where: { userId },
+        data: {
+          gqlAccessToken: tokens.access_token,
+          gqlRefreshToken: tokens.refresh_token,
+          gqlTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+        },
+      })
+    } catch (e) {
+      console.error("GQL token refresh failed, clearing tokens:", e)
+      await prisma.twitchConnection.update({
+        where: { userId },
+        data: {
+          gqlAccessToken: null,
+          gqlRefreshToken: null,
+          gqlTokenExpiresAt: null,
+        },
+      })
+      return null
+    }
   }
 
   return gqlAccessToken
@@ -197,6 +210,11 @@ export async function syncActiveDrops() {
     }
     throw e
   }
+
+  await prisma.twitchDrop.updateMany({
+    where: { isActive: true },
+    data: { isActive: false },
+  })
 
   let count = 0
 

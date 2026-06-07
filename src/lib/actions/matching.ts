@@ -69,14 +69,18 @@ export async function matchDrops() {
       },
     })
 
-    await alertQueue.add("send-alert", {
-      userId: session.user.id,
-      email: user.email,
-      gameName: drop.gameName,
-      dropName: drop.campaignName,
-      endAt: drop.endAt.toISOString(),
-      twitchUrl: `https://www.twitch.tv/drops/inventory`,
-    })
+    try {
+      await alertQueue.add("send-alert", {
+        userId: session.user.id,
+        email: user.email,
+        gameName: drop.gameName,
+        dropName: drop.campaignName,
+        endAt: drop.endAt.toISOString(),
+        twitchUrl: `https://www.twitch.tv/drops/inventory`,
+      })
+    } catch (e) {
+      console.error("Failed to enqueue alert email:", e)
+    }
 
     matchCount++
   }

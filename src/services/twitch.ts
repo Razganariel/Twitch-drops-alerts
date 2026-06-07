@@ -66,7 +66,7 @@ export async function getTwitchUserId(accessToken: string, clientId: string) {
   return data.data?.[0] ?? null
 }
 
-export type FollowedStream = {
+export type FollowedChannel = {
   gameId: string
   gameName: string
   thumbnailUrl: string
@@ -76,16 +76,54 @@ export async function getFollowedStreams(
   accessToken: string,
   clientId: string,
   userId: string
-): Promise<FollowedStream[]> {
-  const url = `${TWITCH_API_BASE}/streams/followed?user_id=${userId}&first=100`
-  const data = await fetchWithToken(url, accessToken, clientId)
-  return (data.data ?? []).map(
-    (s: { game_id: string; game_name: string; thumbnail_url: string }) => ({
-      gameId: s.game_id,
-      gameName: s.game_name,
-      thumbnailUrl: s.thumbnail_url,
-    })
-  )
+): Promise<FollowedChannel[]> {
+  const allChannels: Array<{ broadcaster_id: string }> = []
+  let cursor: string | null = null
+
+  do {
+    const params = new URLSearchParams({ user_id: userId, first: "100" })
+    if (cursor) params.set("after", cursor)
+
+    const data = await fetchWithToken(
+      `${TWITCH_API_BASE}/channels/followed?${params}`,
+      accessToken,
+      clientId
+    )
+
+    allChannels.push(...(data.data ?? []))
+    cursor = data.pagination?.cursor ?? null
+  } while (cursor)
+
+  if (allChannels.length === 0) return []
+
+  const seen = new Set<string>()
+  const results: FollowedChannel[] = []
+
+  for (let i = 0; i < allChannels.length; i += 100) {
+    const batch = allChannels.slice(i, i + 100)
+    const params = new URLSearchParams()
+    for (const ch of batch) {
+      params.append("user_id", ch.broadcaster_id)
+    }
+
+    const data = await fetchWithToken(
+      `${TWITCH_API_BASE}/streams?${params}`,
+      accessToken,
+      clientId
+    )
+
+    for (const s of data.data ?? []) {
+      if (seen.has(s.game_id)) continue
+      seen.add(s.game_id)
+      results.push({
+        gameId: s.game_id,
+        gameName: s.game_name,
+        thumbnailUrl: s.thumbnail_url,
+      })
+    }
+  }
+
+  return results
 }
 
 export type TwitchDropCampaign = {
@@ -177,7 +215,8 @@ export async function refreshGqlToken(refreshToken: string) {
   })
 
   if (!response.ok) {
-    throw new Error("Failed to refresh GQL token")
+    const body = await response.text()
+    throw new Error(`Failed to refresh GQL token: ${response.status} ${body}`)
   }
 
   return response.json() as Promise<{
