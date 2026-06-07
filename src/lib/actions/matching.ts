@@ -69,17 +69,14 @@ export async function matchDrops() {
       },
     })
 
-    if (process.env.RESEND_API_KEY) {
-      await alertQueue.add("send-alert", {
-        userId: session.user.id,
-        email: user.email,
-        gameName: drop.gameName,
-        campaignName: drop.campaignName,
-        rewardName: drop.rewardName,
-        requiredMinutesWatched: drop.requiredMinutesWatched,
-        endAt: drop.endAt.toISOString(),
-      })
-    }
+    await alertQueue.add("send-alert", {
+      userId: session.user.id,
+      email: user.email,
+      gameName: drop.gameName,
+      dropName: drop.campaignName,
+      endAt: drop.endAt.toISOString(),
+      twitchUrl: `https://www.twitch.tv/drops/inventory`,
+    })
 
     matchCount++
   }
