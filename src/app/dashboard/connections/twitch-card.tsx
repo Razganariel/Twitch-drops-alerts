@@ -148,6 +148,7 @@ export function TwitchConnectionCard({ connection }: Props) {
                 </div>
               ) : (
                 <form action={dAction}>
+                  <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
                   <Button variant="secondary" className="w-full" disabled={dPending}>
                     {dPending ? "Récupération..." : "Synchroniser les drops actifs"}
                   </Button>

@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { parseTwitchDate } from "@/lib/timezone"
 import {
   getFollowedStreams,
   getActiveDropCampaigns,
@@ -179,9 +180,19 @@ export async function checkGqlDeviceFlow(deviceCode: string) {
   return { ok: true, pending: false } as const
 }
 
-export async function syncActiveDrops() {
+export async function syncActiveDrops(
+  _prevState: { ok: boolean; message: string; needsGqlAuth?: boolean } | null,
+  formData: FormData
+) {
   const session = await auth()
-  if (!session?.user?.id) return { ok: false, message: "Non authentifié" } as const
+  if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
+
+  const timezone = (formData.get("timezone") as string) || "UTC"
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { timezone },
+  })
 
   let gqlToken = await getValidGqlToken(session.user.id)
 
@@ -190,7 +201,7 @@ export async function syncActiveDrops() {
       ok: false,
       needsGqlAuth: true,
       message: "Autorisation GQL requise",
-    } as const
+    }
   }
 
   let campaigns: Awaited<ReturnType<typeof getActiveDropCampaigns>>
@@ -206,7 +217,7 @@ export async function syncActiveDrops() {
         ok: false,
         needsGqlAuth: true,
         message: "Token invalide, merci de ré-autoriser",
-      } as const
+      }
     }
     throw e
   }
@@ -239,8 +250,8 @@ export async function syncActiveDrops() {
         campaignName: campaign.name,
         rewardName: firstDrop?.reward?.name ?? firstDrop?.name,
         requiredMinutesWatched: firstDrop?.requiredMinutesWatched ?? null,
-        startAt: new Date(campaign.startAt),
-        endAt: new Date(campaign.endAt),
+        startAt: parseTwitchDate(campaign.startAt, timezone),
+        endAt: parseTwitchDate(campaign.endAt, timezone),
         isActive: true,
       },
       create: {
@@ -251,8 +262,8 @@ export async function syncActiveDrops() {
         campaignName: campaign.name,
         rewardName: firstDrop?.reward?.name ?? firstDrop?.name,
         requiredMinutesWatched: firstDrop?.requiredMinutesWatched ?? null,
-        startAt: new Date(campaign.startAt),
-        endAt: new Date(campaign.endAt),
+        startAt: parseTwitchDate(campaign.startAt, timezone),
+        endAt: parseTwitchDate(campaign.endAt, timezone),
         isActive: true,
       },
     })
@@ -263,5 +274,5 @@ export async function syncActiveDrops() {
   return {
     ok: true,
     message: `${count} campagne${count > 1 ? "s" : ""} de drops synchronisée${count > 1 ? "s" : ""}`,
-  } as const
+  }
 }
