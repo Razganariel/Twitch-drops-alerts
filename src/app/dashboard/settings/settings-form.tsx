@@ -1,7 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
-import { Button } from "@/components/ui/button"
+import { useRef, useActionState } from "react"
 import { updateCheckInterval } from "@/lib/actions/settings"
 
 const INTERVALS = [
@@ -18,10 +17,15 @@ type Props = {
 }
 
 export function SettingsForm({ currentInterval }: Props) {
-  const [result, action, isPending] = useActionState(updateCheckInterval, null)
+  const [, action] = useActionState(updateCheckInterval, null)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  function handleChange() {
+    formRef.current?.requestSubmit()
+  }
 
   return (
-    <form action={action} className="space-y-4">
+    <form ref={formRef} action={action}>
       <div className="flex flex-wrap gap-3">
         {INTERVALS.map(({ value, label }) => {
           const checked = currentInterval === value
@@ -39,6 +43,7 @@ export function SettingsForm({ currentInterval }: Props) {
                 name="interval"
                 value={value}
                 defaultChecked={checked}
+                onChange={handleChange}
                 className="sr-only"
               />
               {label}
@@ -46,16 +51,6 @@ export function SettingsForm({ currentInterval }: Props) {
           )
         })}
       </div>
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Enregistrement..." : "Enregistrer"}
-      </Button>
-      {result && (
-        <p
-          className={`text-sm ${result.ok ? "text-emerald-600" : "text-destructive"}`}
-        >
-          {result.message}
-        </p>
-      )}
     </form>
   )
 }

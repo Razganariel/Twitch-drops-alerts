@@ -181,7 +181,7 @@ async function runPeriodicSync() {
 
   for (const user of dueUsers) {
     const userGames = await prisma.userGame.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, isAlertEnabled: true, deletedAt: null },
       include: { game: true },
     })
 

@@ -12,6 +12,16 @@ enum AlertStatus {
   READ
 }
 
+enum DashboardFilter {
+  ALL
+  MATCH
+}
+
+enum DashboardView {
+  GRID
+  LIST
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -19,9 +29,11 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
-  timezone      String?
-  checkInterval Int       @default(15)
-  lastMatchAt   DateTime?
+  timezone        String?
+  checkInterval   Int              @default(15)
+  lastMatchAt     DateTime?
+  dashboardFilter DashboardFilter  @default(MATCH)
+  dashboardView   DashboardView    @default(GRID)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -106,8 +118,10 @@ model Game {
 }
 
 model UserGame {
-  userId String
-  gameId  String
+  userId         String
+  gameId         String
+  isAlertEnabled Boolean   @default(true)
+  deletedAt      DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)

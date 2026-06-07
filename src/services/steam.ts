@@ -63,7 +63,10 @@ export async function resolveSteamVanityUrl(username: string, apiKey: string) {
   return data.response.steamid!
 }
 
-export function getSteamLogoUrl(appid: number, logoUrl?: string) {
-  if (!logoUrl) return null
-  return `https://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${logoUrl}.jpg`
+export function getSteamLogoUrl(appid: number, logoHash?: string) {
+  if (logoHash) {
+    if (logoHash.startsWith("http")) return logoHash
+    return `https://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${logoHash}.jpg`
+  }
+  return `https://cdn.steamstatic.com/steam/apps/${appid}/header.jpg`
 }

@@ -19,7 +19,7 @@ export async function matchDrops() {
   if (!user?.email) return { ok: false, message: "Aucun email sur le compte" } as const
 
   const userGames = await prisma.userGame.findMany({
-    where: { userId: session.user.id },
+    where: { userId: session.user.id, isAlertEnabled: true, deletedAt: null },
     include: { game: true },
   })
 

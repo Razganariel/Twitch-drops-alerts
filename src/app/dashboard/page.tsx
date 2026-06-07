@@ -29,8 +29,8 @@ export default async function DashboardPage(props: {
   if (!session?.user) redirect("/login")
 
   const searchParams = await props.searchParams
-  const view = searchParams?.view === "list" ? "list" : "grid"
-  const filter = searchParams?.filter === "all" ? "all" : "match"
+  const overrideView = searchParams?.view
+  const overrideFilter = searchParams?.filter
 
   const userId = session.user.id
 
@@ -38,7 +38,7 @@ export default async function DashboardPage(props: {
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { checkInterval: true, lastMatchAt: true, timezone: true },
+        select: { checkInterval: true, lastMatchAt: true, timezone: true, dashboardFilter: true, dashboardView: true },
       }),
       prisma.twitchConnection.findUnique({ where: { userId } }),
       prisma.steamConnection.findUnique({ where: { userId } }),
@@ -58,6 +58,9 @@ export default async function DashboardPage(props: {
     ])
 
   if (!user) redirect("/login")
+
+  const view = overrideView === "list" ? "list" : overrideView === "grid" ? "grid" : user.dashboardView === "LIST" ? "list" : "grid"
+  const filter = overrideFilter === "all" ? "all" : overrideFilter === "match" ? "match" : user.dashboardFilter === "ALL" ? "all" : "match"
 
   const matchedNames = new Set(userGames.map((ug) => ug.game.name.toLowerCase().trim()))
 

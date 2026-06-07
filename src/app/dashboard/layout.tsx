@@ -31,6 +31,12 @@ export default async function DashboardLayout({
             Dashboard
           </Link>
           <Link
+            href="/dashboard/library"
+            className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+          >
+            Bibliothèque
+          </Link>
+          <Link
             href="/dashboard/alerts"
             className="flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
           >
@@ -52,7 +58,7 @@ export default async function DashboardLayout({
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      <main className="flex-1 flex flex-col overflow-y-auto p-8">{children}</main>
     </div>
   )
 }

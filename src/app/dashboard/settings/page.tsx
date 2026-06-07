@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { SettingsForm } from "./settings-form"
+import { DashboardPreferencesForm } from "./dashboard-preferences-form"
 import { TwitchConnectionCard } from "./twitch-card"
 import { SteamConnectionCard } from "./steam-card"
 
@@ -32,7 +33,7 @@ export default async function SettingsPage(props: {
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { checkInterval: true, lastMatchAt: true },
+      select: { checkInterval: true, lastMatchAt: true, dashboardFilter: true, dashboardView: true },
     }),
     prisma.twitchConnection.findUnique({
       where: { userId: session.user.id },
@@ -76,6 +77,21 @@ export default async function SettingsPage(props: {
         </CardHeader>
         <CardContent>
           <SettingsForm currentInterval={user.checkInterval} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Affichage du dashboard</CardTitle>
+          <CardDescription>
+            Personnalise le filtre et la vue par défaut de la page d&apos;accueil.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DashboardPreferencesForm
+            currentFilter={user.dashboardFilter}
+            currentView={user.dashboardView}
+          />
         </CardContent>
       </Card>
 
