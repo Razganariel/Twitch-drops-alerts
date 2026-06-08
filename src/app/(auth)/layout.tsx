@@ -1,3 +1,12 @@
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s — Twitch Drops Alerts",
+    default: "Authentification",
+  },
+}
+
 export default function AuthLayout({
   children,
 }: {
