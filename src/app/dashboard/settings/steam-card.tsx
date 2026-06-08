@@ -29,6 +29,7 @@ export function SteamConnectionCard({
   const cooldown = useCooldown("sync:steam")
 
   const isConnected = !!(connection || result?.steamId)
+  const showConnected = isConnected && !result?.needsReauth
   const displaySteamId = result?.steamId || connection?.steamId || ""
   const displayGameCount = result?.gameCount ?? connection?.gameCount ?? 0
 
@@ -51,7 +52,7 @@ export function SteamConnectionCard({
       </CardHeader>
       <CardContent>
         <form action={(formData) => { cooldown.markSynced(); formAction(formData) }} className="space-y-4">
-          {isConnected ? (
+          {showConnected ? (
             <div className="space-y-3">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -82,6 +83,11 @@ export function SteamConnectionCard({
             </div>
           ) : (
             <>
+              {result?.needsReauth && (
+                <p className="text-sm text-destructive">
+                  Ta clé API Steam n&apos;est plus valide. Saissis-en une nouvelle pour continuer.
+                </p>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="username">Pseudo Steam ou ID Steam</Label>
                 <Input
