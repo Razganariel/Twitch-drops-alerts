@@ -215,14 +215,28 @@ async function runPeriodicSync() {
         },
       })
 
+      const dropItems = await prisma.dropItem.findMany({
+        where: { twitchDropId: drop.id },
+        orderBy: { sortOrder: "asc" },
+      })
+
       try {
         await alertQueue.add("send-alert", {
           userId: user.id,
           email: user.email!,
           gameName: drop.gameName,
+          gameBoxArtUrl: drop.gameBoxArtUrl,
+          gameSteamAppId: matchedGame.game.steamAppId,
           dropName: drop.campaignName,
+          startAt: drop.startAt.toISOString(),
           endAt: drop.endAt.toISOString(),
           twitchUrl: "https://www.twitch.tv/drops/inventory",
+          dropItems: dropItems.map((di) => ({
+            name: di.name,
+            rewardName: di.rewardName,
+            rewardImageUrl: di.rewardImageUrl,
+            requiredMinutesWatched: di.requiredMinutesWatched,
+          })),
         })
       } catch (e) {
         console.error(`[sync] Échec de l'envoi email pour ${user.id}:`, e)
