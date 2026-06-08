@@ -20,10 +20,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 EXPOSE 3330
 
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push && node server.js"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --url \"$DATABASE_URL\" && node server.js"]
 
 FROM node:22-alpine AS worker-runner
 WORKDIR /app
