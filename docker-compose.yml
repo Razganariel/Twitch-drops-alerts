@@ -38,6 +38,7 @@ services:
       - "3330:3330"
     environment:
       - PORT=3330
+      - DATABASE_URL=postgresql://twitchdrops:twitchdrops@postgres:5432/twitch-drops-alerts?schema=public
     env_file: .env
     depends_on:
       postgres:
@@ -52,6 +53,8 @@ services:
     build:
       context: .
       target: worker-runner
+    environment:
+      - DATABASE_URL=postgresql://twitchdrops:twitchdrops@postgres:5432/twitch-drops-alerts?schema=public
     env_file: .env
     depends_on:
       postgres:
