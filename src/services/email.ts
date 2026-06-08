@@ -29,12 +29,100 @@ function getSmtpTransport() {
   return smtpTransport
 }
 
-function buildHtml(params: { gameName: string; dropName: string; endAt: Date; twitchUrl: string }) {
-  const endDate = new Date(params.endAt).toLocaleDateString("fr-FR", {
+type DropItemData = {
+  name: string
+  rewardName: string | null
+  rewardImageUrl: string | null
+  requiredMinutesWatched: number | null
+}
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",
   })
+}
+
+function formatDateShort(date: Date) {
+  return date.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+  })
+}
+
+const APP_URL = process.env.APP_URL || "https://twitch-drops-alerts.duckdns.org"
+
+function buildWatchItems(items: DropItemData[]) {
+  return items.filter((i) => i.requiredMinutesWatched != null && i.requiredMinutesWatched > 0)
+}
+
+function buildSubItems(items: DropItemData[]) {
+  return items.filter((i) => i.requiredMinutesWatched == null || i.requiredMinutesWatched === 0)
+}
+
+function buildItemsSection(items: DropItemData[], title: string, icon: string) {
+  if (items.length === 0) return ""
+
+  return `
+    <tr>
+      <td style="padding:0 32px 12px;">
+        <p style="margin:0;font-size:13px;font-weight:600;color:#9147ff;text-transform:uppercase;letter-spacing:0.5px;">
+          ${icon} ${title}
+        </p>
+      </td>
+    </tr>
+    ${items.map((item, i) => `
+    <tr>
+      <td style="padding:${i === 0 ? "0" : "8"}px 32px ${i === items.length - 1 ? "20" : "0"}px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafafa;border-radius:8px;">
+          <tr>
+            ${item.rewardImageUrl ? `
+            <td width="64" style="padding:8px;">
+              <img src="${item.rewardImageUrl}" alt="" width="56" height="56" style="display:block;width:56px;height:56px;border-radius:6px;object-fit:cover;" />
+            </td>
+            ` : ""}
+            <td style="padding:8px 12px;">
+              <p style="margin:0;font-size:14px;font-weight:600;color:#18181b;">
+                ${item.rewardName ?? item.name}
+              </p>
+              ${item.requiredMinutesWatched != null ? `
+              <p style="margin:2px 0 0;font-size:12px;color:#71717a;">
+                ${item.requiredMinutesWatched} min de visionnage
+              </p>
+              ` : ""}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    `).join("")}`
+}
+
+function gameImageUrl(steamAppId: number | null, boxArtUrl: string | null) {
+  if (steamAppId) {
+    return `https://cdn.steamstatic.com/steam/apps/${steamAppId}/header.jpg`
+  }
+  return boxArtUrl
+}
+
+function buildHtml(params: {
+  gameName: string
+  gameBoxArtUrl: string | null
+  gameSteamAppId: number | null
+  dropName: string
+  startAt: Date
+  endAt: Date
+  twitchUrl: string
+  dropItems?: DropItemData[] | null
+}) {
+  const items = params.dropItems ?? []
+  const watchItems = buildWatchItems(items)
+  const subItems = buildSubItems(items)
+
+  const hasItems = watchItems.length > 0 || subItems.length > 0
+
+  const gameImg = gameImageUrl(params.gameSteamAppId, params.gameBoxArtUrl)
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -47,37 +135,68 @@ function buildHtml(params: { gameName: string; dropName: string; endAt: Date; tw
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
     <tr>
       <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="100%" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <table role="presentation" width="100%" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
           <tr>
-            <td style="padding:32px 32px 24px;text-align:center;background:linear-gradient(135deg,#9147ff,#772ce8);">
-              <span style="font-size:48px;line-height:1;">🎮</span>
-              <h1 style="margin:12px 0 0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
+            <td style="padding:24px 32px;text-align:center;background:linear-gradient(135deg,#9147ff,#772ce8);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:12px;">
+                    <img src="${APP_URL}/favicon.svg" alt="" width="40" height="40" style="display:inline-block;width:40px;height:40px;border-radius:8px;background:#ffffff20;" />
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
                 Drop Twitch disponible&nbsp;!
               </h1>
             </td>
           </tr>
+
+          ${gameImg ? `
           <tr>
-            <td style="padding:24px 32px;">
-              <p style="margin:0 0 8px;font-size:14px;color:#71717a;">Jeu</p>
-              <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#18181b;">
+            <td style="padding:24px 32px 0;text-align:center;">
+              <img src="${gameImg}" alt="${params.gameName}" width="480" style="display:block;width:100%;max-width:480px;height:auto;border-radius:10px;margin:0 auto;" />
+            </td>
+          </tr>
+          ` : ""}
+
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <p style="margin:0 0 4px;font-size:13px;color:#71717a;">Jeu</p>
+              <p style="margin:0 0 20px;font-size:22px;font-weight:700;color:#18181b;">
                 ${params.gameName}
               </p>
 
-              <p style="margin:0 0 8px;font-size:14px;color:#71717a;">Campagne</p>
-              <p style="margin:0 0 24px;font-size:16px;color:#27272a;">
+              <p style="margin:0 0 4px;font-size:13px;color:#71717a;">Campagne</p>
+              <p style="margin:0 0 20px;font-size:16px;color:#27272a;">
                 ${params.dropName}
               </p>
 
-              <p style="margin:0 0 8px;font-size:14px;color:#71717a;">Date de fin</p>
-              <p style="margin:0 0 28px;font-size:16px;color:#27272a;">
-                ${endDate}
+              <p style="margin:0 0 4px;font-size:13px;color:#71717a;">Période</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#27272a;">
+                du ${formatDateShort(params.startAt)} au ${formatDate(params.endAt)}
               </p>
+            </td>
+          </tr>
 
+          ${hasItems ? `
+          <tr>
+            <td style="padding:0 32px 8px;border-top:1px solid #e4e4e7;">
+              <p style="margin:16px 0 12px;font-size:15px;font-weight:600;color:#18181b;">
+                🏆 À gagner
+              </p>
+            </td>
+          </tr>
+          ${watchItems.length > 0 ? buildItemsSection(watchItems, "Visionnage", "🎬") : ""}
+          ${subItems.length > 0 ? buildItemsSection(subItems, "Abonnement", "⭐") : ""}
+          ` : ""}
+
+          <tr>
+            <td style="padding:0 32px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
                     <a href="${params.twitchUrl}"
-                       style="display:inline-block;padding:14px 32px;border-radius:8px;background-color:#9147ff;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;">
+                       style="display:inline-block;padding:14px 36px;border-radius:8px;background-color:#9147ff;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;">
                       Voir sur Twitch
                     </a>
                   </td>
@@ -85,10 +204,12 @@ function buildHtml(params: { gameName: string; dropName: string; endAt: Date; tw
               </table>
             </td>
           </tr>
+
           <tr>
             <td style="padding:20px 32px;background-color:#fafafa;border-top:1px solid #e4e4e7;">
               <p style="margin:0;font-size:12px;color:#a1a1aa;text-align:center;">
-                Tu reçois cet email car tu as activé les alertes de drops sur Twitch Drops Alerts.
+                Tu reçois cet email car tu as activé les alertes de drops sur
+                <a href="${APP_URL}" style="color:#9147ff;text-decoration:none;">Twitch Drops Alerts</a>.
               </p>
             </td>
           </tr>
@@ -103,9 +224,13 @@ function buildHtml(params: { gameName: string; dropName: string; endAt: Date; tw
 export async function sendDropAlert(params: {
   to: string
   gameName: string
+  gameBoxArtUrl: string | null
+  gameSteamAppId: number | null
   dropName: string
+  startAt: Date
   endAt: Date
   twitchUrl: string
+  dropItems: DropItemData[]
 }) {
   const client = getResend()
   const transport = getSmtpTransport()

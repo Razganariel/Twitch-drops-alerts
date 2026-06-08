@@ -15,14 +15,18 @@ const connection = {
 const alertWorker = new Worker(
   "alerts",
   async (job) => {
-    const { email, gameName, dropName, endAt, twitchUrl } = job.data
+    const { email, gameName, gameBoxArtUrl, gameSteamAppId, dropName, startAt, endAt, twitchUrl, dropItems } = job.data
 
     await sendDropAlert({
       to: email,
       gameName,
+      gameBoxArtUrl,
+      gameSteamAppId,
       dropName,
+      startAt: new Date(startAt),
       endAt: new Date(endAt),
       twitchUrl,
+      dropItems,
     })
   },
   { connection }
