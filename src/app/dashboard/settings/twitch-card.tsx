@@ -1,21 +1,12 @@
 "use client"
 
-import { useState, useCallback, useActionState } from "react"
+import { useState, useEffect, useCallback, useRef, useActionState } from "react"
 import { signIn } from "next-auth/react"
 import { syncFollowedGames, syncActiveDrops, startGqlDeviceFlow, checkGqlDeviceFlow } from "@/lib/actions/twitch"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useCooldown } from "@/components/shared/use-cooldown"
-
-function CooldownIndicator({ remaining }: { remaining: number }) {
-  const minutes = Math.ceil(remaining / 60000)
-  return (
-    <span className="text-xs text-muted-foreground ml-2">
-      ({minutes} min)
-    </span>
-  )
-}
 
 type Props = {
   connection: {
@@ -66,12 +57,28 @@ export function TwitchConnectionCard({ connection }: Props) {
 
       setGql({
         step: r.ok ? "done" : "error",
-        message: r.ok ? "Autorisation réussie !" : r.message,
+        message: r.ok ? "Autorisation réussie ! Synchronisation en cours..." : r.message,
       })
     }
 
     setTimeout(poll, (flow.interval ?? 5) * 1000)
   }, [])
+
+  const dropsFormRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (gql.step === "done") {
+      const formData = new FormData()
+      formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone)
+      dAction(formData)
+    }
+  }, [gql.step, dAction])
+
+  useEffect(() => {
+    if (dResult && dResult.ok && !("needsGqlAuth" in dResult)) {
+      dropsCooldown.markSynced()
+    }
+  }, [dResult, dropsCooldown])
 
   return (
     <Card>
@@ -112,7 +119,9 @@ export function TwitchConnectionCard({ connection }: Props) {
                     ? "Synchronisation..."
                     : "Synchroniser mes jeux suivis"}
                   {followedCooldown.isOnCooldown && (
-                    <CooldownIndicator remaining={followedCooldown.remaining} />
+                    <span className="text-xs text-muted-foreground ml-2">
+                      ({Math.ceil(followedCooldown.remaining / 60000)} min)
+                    </span>
                   )}
                 </Button>
               </form>
@@ -164,13 +173,14 @@ export function TwitchConnectionCard({ connection }: Props) {
                   </p>
                 </div>
               ) : (
-                <form action={(formData) => { dropsCooldown.markSynced(); dAction(formData) }}>
+                <form ref={dropsFormRef} action={(formData) => dAction(formData)}>
                   <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
                   <Button variant="secondary" className="w-full" disabled={dPending || dropsCooldown.isOnCooldown}>
-                    {dPending ? "Récupération..." : "Synchroniser les drops actifs"}
-                    {dropsCooldown.isOnCooldown && (
-                      <CooldownIndicator remaining={dropsCooldown.remaining} />
-                    )}
+                    {dPending
+                      ? "Récupération..."
+                      : dropsCooldown.isOnCooldown
+                        ? `Synchroniser les drops actifs (${Math.ceil(dropsCooldown.remaining / 60000)} min)`
+                        : "Synchroniser les drops actifs"}
                   </Button>
                 </form>
               )}
