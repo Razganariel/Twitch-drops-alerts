@@ -1,19 +1,60 @@
 services:
   postgres:
-    image: postgres:16
+    container_name: twitch-drops-postgres
+    image: docker.io/library/postgres:16
     environment:
-      POSTGRES_USER: twitchdrops
-      POSTGRES_PASSWORD: twitchdrops
-      POSTGRES_DB: twitch-drops-alerts
+      POSTGRES_USER: PLACE_HOLDER
+      POSTGRES_PASSWORD: PLACE_HOLDER
+      POSTGRES_DB: PLACE_HOLDER
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U PLACE_HOLDER -d PLACE_HOLDER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
 
   redis:
-    image: redis:7-alpine
+    container_name: twitch-drops-redis
+    image: docker.io/library/redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 128m
 
-volumes:
-  pgdata:
+  app:
+    container_name: twitch-drops-alerts
+    build:
+      context: .
+      target: app-runner
+    ports:
+      - "3330:3330"
+    environment:
+      - PORT=3330
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 128m
+
+  worker:
+    container_name: twitch-drops-worker
+    build:
+      context: .
+      target: worker-runner
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 128m

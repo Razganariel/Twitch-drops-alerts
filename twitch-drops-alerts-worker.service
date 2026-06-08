@@ -1,0 +1,17 @@
+[Unit]
+Description=Twitch Drops Alerts — Worker BullMQ
+After=network.target postgres.service redis.service
+Wants=postgres.service redis.service
+
+[Service]
+Type=simple
+User=dvergar
+Group=dvergar
+WorkingDirectory=/home/dvergar/projets/Twitch-drops-alerts
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run worker
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
