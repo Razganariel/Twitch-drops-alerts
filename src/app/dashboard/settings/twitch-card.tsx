@@ -25,6 +25,8 @@ export function TwitchConnectionCard({ connection }: Props) {
   const followedCooldown = useCooldown("sync:twitch:followed")
   const dropsCooldown = useCooldown("sync:twitch:drops")
 
+  const [autoSync, setAutoSync] = useState(false)
+
   const [gql, setGql] = useState<{
     step: "idle" | "code" | "polling" | "done" | "error"
     userCode?: string
@@ -68,11 +70,18 @@ export function TwitchConnectionCard({ connection }: Props) {
 
   useEffect(() => {
     if (gql.step === "done") {
+      setAutoSync(true)
       const formData = new FormData()
       formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone)
       dAction(formData)
     }
   }, [gql.step, dAction])
+
+  useEffect(() => {
+    if (dResult) {
+      setAutoSync(false)
+    }
+  }, [dResult])
 
   useEffect(() => {
     if (dResult && dResult.ok && !("needsGqlAuth" in dResult)) {
@@ -175,12 +184,14 @@ export function TwitchConnectionCard({ connection }: Props) {
               ) : (
                 <form ref={dropsFormRef} action={(formData) => dAction(formData)}>
                   <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
-                  <Button variant="secondary" className="w-full" disabled={dPending || dropsCooldown.isOnCooldown}>
-                    {dPending
-                      ? "Récupération..."
-                      : dropsCooldown.isOnCooldown
-                        ? `Synchroniser les drops actifs (${Math.ceil(dropsCooldown.remaining / 60000)} min)`
-                        : "Synchroniser les drops actifs"}
+                  <Button variant="secondary" className="w-full" disabled={dPending || dropsCooldown.isOnCooldown || autoSync}>
+                    {autoSync
+                      ? "Synchronisation en cours..."
+                      : dPending
+                        ? "Récupération..."
+                        : dropsCooldown.isOnCooldown
+                          ? `Synchroniser les drops actifs (${Math.ceil(dropsCooldown.remaining / 60000)} min)`
+                          : "Synchroniser les drops actifs"}
                   </Button>
                 </form>
               )}

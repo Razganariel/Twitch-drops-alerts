@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { encrypt, decrypt } from "@/lib/encryption"
+import { encrypt, decrypt, maskValue } from "@/lib/encryption"
 import { getSteamLibrary, resolveSteamVanityUrl, getSteamLogoUrl } from "@/services/steam"
 
 export type ConnectSteamResult = {
@@ -10,6 +10,7 @@ export type ConnectSteamResult = {
   message: string
   gameCount?: number
   steamId?: string
+  needsReauth?: boolean
 }
 
 export async function connectSteam(
@@ -23,11 +24,11 @@ export async function connectSteam(
   const username = formData.get("username") as string
   const apiKey = formData.get("apiKey") as string
 
-  try {
-    const existing = await prisma.steamConnection.findUnique({
-      where: { userId: session.user.id },
-    })
+  const existing = await prisma.steamConnection.findUnique({
+    where: { userId: session.user.id },
+  })
 
+  try {
     let effectiveApiKey = apiKey
     if (!effectiveApiKey && existing) {
       effectiveApiKey = decrypt(existing.steamApiKey)
@@ -109,11 +110,13 @@ export async function connectSteam(
       : newCount > 0
         ? `${newCount} nouveau${newCount > 1 ? "x" : ""} importé${newCount > 1 ? "s" : ""}`
         : "Aucun nouveau jeu"
-    return { ok: true, message, gameCount: games.length, steamId }
+    return { ok: true, message, gameCount: games.length, steamId: maskValue(steamId) }
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue"
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Erreur inconnue",
+      message,
+      needsReauth: existing ? message.includes("Clé API Steam invalide") : false,
     }
   }
 }
