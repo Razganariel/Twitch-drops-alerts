@@ -137,17 +137,8 @@ function buildHtml(params: {
       <td align="center" style="padding:40px 16px;">
         <table role="presentation" width="100%" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
           <tr>
-            <td style="padding:24px 32px;text-align:center;background:linear-gradient(135deg,#9147ff,#772ce8);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:12px;">
-                    <img src="${APP_URL}/favicon.svg" alt="" width="40" height="40" style="display:inline-block;width:40px;height:40px;border-radius:8px;background:#ffffff20;" />
-                  </td>
-                </tr>
-              </table>
-              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
-                Drop Twitch disponible&nbsp;!
-              </h1>
+            <td style="padding:0;">
+              <img src="${APP_URL}/baniere-email.png" alt="Drop Twitch disponible !" width="560" style="display:block;width:100%;max-width:560px;height:auto;" />
             </td>
           </tr>
 
