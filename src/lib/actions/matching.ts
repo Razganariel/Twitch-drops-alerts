@@ -1,9 +1,10 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { alertQueue } from "@/lib/queue"
 import { normalize } from "@/lib/utils"
+import { sendDropAlert } from "@/services/email"
 
 export async function matchDrops() {
   const session = await auth()
@@ -68,16 +69,15 @@ export async function matchDrops() {
     })
 
     try {
-      await alertQueue.add("send-alert", {
-        userId: session.user.id,
-        email: user.email,
+      await sendDropAlert({
+        to: user.email,
         gameName: drop.gameName,
         gameBoxArtUrl: drop.gameBoxArtUrl,
         gameSteamAppId: matchedGame.game.steamAppId,
         dropName: drop.campaignName,
-        startAt: drop.startAt.toISOString(),
-        endAt: drop.endAt.toISOString(),
-        twitchUrl: `https://www.twitch.tv/drops/inventory`,
+        startAt: drop.startAt,
+        endAt: drop.endAt,
+        twitchUrl: "https://www.twitch.tv/drops/inventory",
         dropItems: dropItems.map((di) => ({
           name: di.name,
           rewardName: di.rewardName,
@@ -86,12 +86,13 @@ export async function matchDrops() {
         })),
       })
     } catch (e) {
-      console.error("Failed to enqueue alert email:", e)
+      console.error("[matching] Échec envoi email:", e)
     }
 
     matchCount++
   }
 
+  revalidatePath("/dashboard")
   return {
     ok: true,
     message: `${matchCount} alerte${matchCount > 1 ? "s" : ""} générée${matchCount > 1 ? "s" : ""}`,

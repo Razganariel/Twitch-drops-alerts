@@ -1,24 +1,15 @@
 import { PrismaClient } from "../generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
-import { Queue, Worker } from "bullmq"
 import { getActiveDropCampaigns, getDropCampaignDetails } from "../services/twitch"
 import { parseTwitchDate } from "./timezone"
 import { normalize } from "./utils"
-import { alertQueue } from "./queue"
-
-const REDIS_URL = process.env.REDIS_URL || "redis://192.168.1.222:6379"
-const redisUrl = new URL(REDIS_URL)
-const redisConnection = {
-  host: redisUrl.hostname,
-  port: Number(redisUrl.port) || 6379,
-  ...(redisUrl.password ? { password: redisUrl.password } : {}),
-}
+import { type AlertJobData } from "./queue"
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
 })
 
-async function runPeriodicSync() {
+export async function runPeriodicSync() {
   console.log("[sync] Début de la synchronisation planifiée")
 
   const users = await prisma.user.findMany({
@@ -220,26 +211,28 @@ async function runPeriodicSync() {
         orderBy: { sortOrder: "asc" },
       })
 
+      const alertData = {
+        userId: user.id,
+        email: user.email!,
+        gameName: drop.gameName,
+        gameBoxArtUrl: drop.gameBoxArtUrl,
+        gameSteamAppId: matchedGame.game.steamAppId,
+        dropName: drop.campaignName,
+        startAt: drop.startAt.toISOString(),
+        endAt: drop.endAt.toISOString(),
+        twitchUrl: "https://www.twitch.tv/drops/inventory",
+        dropItems: dropItems.map((di) => ({
+          name: di.name,
+          rewardName: di.rewardName,
+          rewardImageUrl: di.rewardImageUrl,
+          requiredMinutesWatched: di.requiredMinutesWatched,
+        })),
+      }
+
       try {
-        await alertQueue.add("send-alert", {
-          userId: user.id,
-          email: user.email!,
-          gameName: drop.gameName,
-          gameBoxArtUrl: drop.gameBoxArtUrl,
-          gameSteamAppId: matchedGame.game.steamAppId,
-          dropName: drop.campaignName,
-          startAt: drop.startAt.toISOString(),
-          endAt: drop.endAt.toISOString(),
-          twitchUrl: "https://www.twitch.tv/drops/inventory",
-          dropItems: dropItems.map((di) => ({
-            name: di.name,
-            rewardName: di.rewardName,
-            rewardImageUrl: di.rewardImageUrl,
-            requiredMinutesWatched: di.requiredMinutesWatched,
-          })),
-        })
+        await sendDropAlertDirect(alertData)
       } catch (e) {
-        console.error(`[sync] Échec de l'envoi email pour ${user.id}:`, e)
+        console.error("[sync] Échec envoi email:", e)
       }
 
       matchCount++
@@ -260,27 +253,19 @@ async function runPeriodicSync() {
   return { ok: true, count: totalAlerts }
 }
 
-export const syncQueue = new Queue("sync", {
-  connection: redisConnection,
-})
-
-export function startSyncWorker() {
-  const worker = new Worker(
-    "sync",
-    async () => {
-      await runPeriodicSync()
-    },
-    { connection: redisConnection }
-  )
-
-  worker.on("completed", (job) => {
-    console.log(`[sync] Job ${job.id} terminé`)
+async function sendDropAlertDirect(data: AlertJobData) {
+  const { sendDropAlert } = await import("../services/email")
+  await sendDropAlert({
+    to: data.email,
+    gameName: data.gameName,
+    gameBoxArtUrl: data.gameBoxArtUrl,
+    gameSteamAppId: data.gameSteamAppId,
+    dropName: data.dropName,
+    startAt: new Date(data.startAt),
+    endAt: new Date(data.endAt),
+    twitchUrl: data.twitchUrl,
+    dropItems: data.dropItems,
   })
-
-  worker.on("failed", (job, err) => {
-    console.error(`[sync] Job ${job?.id} échoué: ${err.message}`)
-  })
-
-  console.log("[sync] Worker démarré")
-  return worker
 }
+
+
