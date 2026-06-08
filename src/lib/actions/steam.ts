@@ -2,12 +2,20 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { encrypt, decrypt } from "@/lib/encryption"
 import { getSteamLibrary, resolveSteamVanityUrl, getSteamLogoUrl } from "@/services/steam"
 
+export type ConnectSteamResult = {
+  ok: boolean
+  message: string
+  gameCount?: number
+  steamId?: string
+}
+
 export async function connectSteam(
-  _prevState: { ok: boolean; message: string; gameCount?: number } | null,
+  _prevState: ConnectSteamResult | null,
   formData: FormData
-) {
+): Promise<ConnectSteamResult> {
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
 
@@ -15,24 +23,32 @@ export async function connectSteam(
   const username = formData.get("username") as string
   const apiKey = formData.get("apiKey") as string
 
-  if (!apiKey) return { ok: false, message: "Clé API Steam requise" }
-
   try {
+    const existing = await prisma.steamConnection.findUnique({
+      where: { userId: session.user.id },
+    })
+
+    let effectiveApiKey = apiKey
+    if (!effectiveApiKey && existing) {
+      effectiveApiKey = decrypt(existing.steamApiKey)
+    }
+    if (!effectiveApiKey) return { ok: false, message: "Clé API Steam requise" }
+
     let steamId: string | null = null
 
     if (username) {
       if (/^\d{17}$/.test(username.trim())) {
         steamId = username.trim()
       } else {
-        steamId = await resolveSteamVanityUrl(username, apiKey)
+        steamId = await resolveSteamVanityUrl(username, effectiveApiKey)
       }
     } else {
-      steamId = steamIdInput
+      steamId = steamIdInput || existing?.steamId || null
     }
 
-    if (!steamId) return { ok: false, message: username ? `Aucun profil Steam trouvé pour "${username}"` : "Pseudo ou ID Steam requis" }
+    if (!steamId) return { ok: false, message: "ID Steam requis" }
 
-    const games = await getSteamLibrary(steamId, apiKey)
+    const games = await getSteamLibrary(steamId, effectiveApiKey)
 
     const existingSteamIds = new Set(
       (await prisma.userGame.findMany({
@@ -70,17 +86,19 @@ export async function connectSteam(
       }
     }
 
+    const encryptedKey = encrypt(effectiveApiKey)
+
     await prisma.steamConnection.upsert({
       where: { userId: session.user.id },
       update: {
         steamId,
-        steamApiKey: apiKey,
+        steamApiKey: encryptedKey,
         lastSyncedAt: new Date(),
       },
       create: {
         userId: session.user.id,
         steamId,
-        steamApiKey: apiKey,
+        steamApiKey: encryptedKey,
         lastSyncedAt: new Date(),
       },
     })
@@ -91,7 +109,7 @@ export async function connectSteam(
       : newCount > 0
         ? `${newCount} nouveau${newCount > 1 ? "x" : ""} importé${newCount > 1 ? "s" : ""}`
         : "Aucun nouveau jeu"
-    return { ok: true, message, gameCount: games.length }
+    return { ok: true, message, gameCount: games.length, steamId }
   } catch (error) {
     return {
       ok: false,

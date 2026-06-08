@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { SettingsForm } from "./settings-form"
 import { DashboardPreferencesForm } from "./dashboard-preferences-form"
+import { maskValue } from "@/lib/encryption"
 import { TwitchConnectionCard } from "./twitch-card"
 import { SteamConnectionCard } from "./steam-card"
 
@@ -112,7 +113,7 @@ export default async function SettingsPage(props: {
         connection={
           steamConnection
             ? {
-                steamId: steamConnection.steamId,
+                steamId: maskValue(steamConnection.steamId),
                 lastSyncedAt: steamConnection.lastSyncedAt,
                 gameCount: userGamesCount,
               }
