@@ -19,6 +19,7 @@
 
 # production
 /build
+docker-compose.yaml
 
 # misc
 *-lock.json

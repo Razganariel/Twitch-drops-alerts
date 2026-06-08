@@ -3,15 +3,15 @@ services:
     container_name: twitch-drops-postgres
     image: docker.io/library/postgres:16
     environment:
-      POSTGRES_USER: PLACE_HOLDER
-      POSTGRES_PASSWORD: PLACE_HOLDER
-      POSTGRES_DB: PLACE_HOLDER
+      POSTGRES_USER: PLACE_HOLDER_USER
+      POSTGRES_PASSWORD: PLACE_HOLDER_PASSWORD
+      POSTGRES_DB: PLACE_HOLDER_DB
     ports:
       - "5432:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data:Z
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U PLACE_HOLDER -d PLACE_HOLDER"]
+      test: ["CMD-SHELL", "pg_isready -U PLACE_HOLDER_USER -d PLACE_HOLDER_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -38,7 +38,7 @@ services:
       - "3330:3330"
     environment:
       - PORT=3330
-      - DATABASE_URL=postgresql://twitchdrops:twitchdrops@postgres:5432/twitch-drops-alerts?schema=public
+      - DATABASE_URL=postgresql://PLACE_HOLDER_USER:PLACE_HOLDER_PASSWORD@postgres:5432/PLACE_HOLDER_DB?schema=public
     env_file: .env
     depends_on:
       postgres:
@@ -54,7 +54,7 @@ services:
       context: .
       target: worker-runner
     environment:
-      - DATABASE_URL=postgresql://twitchdrops:twitchdrops@postgres:5432/twitch-drops-alerts?schema=public
+      - DATABASE_URL=postgresql://PLACE_HOLDER_USER:PLACE_HOLDER_PASSWORD@postgres:5432/PLACE_HOLDER_DB?schema=public
     env_file: .env
     depends_on:
       postgres:
