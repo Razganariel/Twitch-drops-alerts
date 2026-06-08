@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Gamepad2,
   Bell,
@@ -34,8 +35,17 @@ export default async function Home() {
     <div className="flex flex-col min-h-svh">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center justify-between px-6 max-w-6xl mx-auto">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            Twitch Drops Alerts
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/TwitchDropsSteam.png"
+              alt="Twitch Drops Alerts"
+              width={32}
+              height={32}
+              className="rounded"
+            />
+            <span className="text-xl font-bold tracking-tight hidden sm:inline">
+              Twitch Drops Alerts
+            </span>
           </Link>
           <nav className="flex items-center gap-4">
             <Link
@@ -55,7 +65,7 @@ export default async function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="flex flex-col items-center justify-center px-6 py-24 md:py-32 text-center">
+        <section className="flex flex-col items-center px-6 py-24 md:py-32 text-center">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight max-w-3xl">
             Ne ratez plus aucun drop Twitch
           </h1>
@@ -70,6 +80,16 @@ export default async function Home() {
             Commencer
             <ArrowRight className="h-5 w-5" />
           </Link>
+          <div className="mt-16 w-full max-w-4xl">
+            <Image
+              src="/baniere.png"
+              alt="Aperçu de l'application"
+              width={1584}
+              height={672}
+              className="rounded-lg border shadow-xl w-full h-auto"
+              priority
+            />
+          </div>
         </section>
 
         <section className="border-t py-16 md:py-24 px-6">
