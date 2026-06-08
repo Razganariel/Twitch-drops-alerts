@@ -70,3 +70,38 @@ export function getSteamLogoUrl(appid: number, logoHash?: string) {
   }
   return `https://cdn.steamstatic.com/steam/apps/${appid}/header.jpg`
 }
+
+const STORE_SEARCH_URL = "https://store.steampowered.com/api/storesearch"
+
+export type SteamSearchResult = {
+  id: number
+  name: string
+  tiny_image: string
+  price?: { final: number; currency: string }
+}
+
+type StoreSearchResponse = {
+  items: SteamSearchResult[]
+  total: number
+}
+
+export async function searchSteamStorefront(query: string, limit = 20): Promise<SteamSearchResult[]> {
+  const url = `${STORE_SEARCH_URL}?term=${encodeURIComponent(query)}&l=fr&cc=FR&category1=998&count=${limit}`
+  const response = await fetch(url)
+  if (!response.ok) return []
+
+  const data = (await response.json()) as StoreSearchResponse
+  return data.items ?? []
+}
+
+export async function getGameDetails(appid: number): Promise<{ name: string; steamAppId: number }> {
+  const url = `${STORE_SEARCH_URL}?term=${appid}&l=fr&cc=FR&category1=998`
+  const response = await fetch(url)
+  if (!response.ok) throw new Error("Impossible de récupérer les détails du jeu")
+
+  const data = (await response.json()) as StoreSearchResponse
+  const item = data.items?.find((i) => i.id === appid)
+  if (!item) throw new Error("Jeu introuvable")
+
+  return { name: item.name, steamAppId: item.id }
+}
