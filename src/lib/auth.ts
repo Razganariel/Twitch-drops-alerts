@@ -5,7 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 
 import { prisma } from "@/lib/prisma"
-import { encrypt, decrypt, hashValue } from "@/lib/encryption"
+import { encrypt, decrypt, safeDecrypt, hashValue } from "@/lib/encryption"
 
 declare module "next-auth" {
   interface Session {
@@ -68,8 +68,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       const user = account.user
       return {
         ...user,
-        email: user.email ? decrypt(user.email) : null,
-        name: user.name ? decrypt(user.name) : null,
+        email: user.email ? safeDecrypt(user.email) : null,
+        name: user.name ? safeDecrypt(user.name) : null,
       } as any
     },
     async updateUser(userData) {
