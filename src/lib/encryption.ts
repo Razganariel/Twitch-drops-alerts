@@ -11,6 +11,14 @@ function getKey(): Buffer {
   return Buffer.from(raw, "hex")
 }
 
+export function safeDecrypt(value: string): string {
+  try {
+    return decrypt(value)
+  } catch {
+    return value
+  }
+}
+
 export function encrypt(plaintext: string): string {
   const key = getKey()
   const iv = crypto.randomBytes(IV_LENGTH)
