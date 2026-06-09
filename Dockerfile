@@ -24,7 +24,7 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 EXPOSE 3330
 
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --url \"$DATABASE_URL\" && node server.js"]
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --accept-data-loss --url \"$DATABASE_URL\" && node server.js"]
 
 FROM node:22-alpine AS worker-runner
 WORKDIR /app
