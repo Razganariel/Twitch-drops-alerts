@@ -64,8 +64,66 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async getUserByEmail(email) {
       const emailHash = hashValue(email)
       const user = await prisma.user.findUnique({ where: { emailHash } })
-      if (user) return user as any
-      return prisma.user.findUnique({ where: { email } }) as any
+      if (user) {
+        return {
+          ...user,
+          email: decrypt(user.email!),
+          name: user.name ? decrypt(user.name) : null,
+        } as any
+      }
+
+      const legacyUser = await prisma.user.findUnique({ where: { email } })
+      if (!legacyUser) return null as any
+
+      const plainEmail = legacyUser.email!
+      const plainName = legacyUser.name
+      await migrateUser(legacyUser.id, plainEmail, plainName)
+      return {
+        ...legacyUser,
+        email: plainEmail,
+        name: plainName,
+      } as any
+    },
+    async getUserByAccount({ provider, providerAccountId }) {
+      const account = await prisma.account.findUnique({
+        where: { provider_providerAccountId: { provider, providerAccountId } },
+        include: { user: true },
+      })
+      if (!account) return null as any
+      const user = account.user
+      if (user.emailHash) {
+        return {
+          ...user,
+          email: decrypt(user.email!),
+          name: user.name ? decrypt(user.name) : null,
+        } as any
+      }
+      const plainEmail = user.email!
+      const plainName = user.name
+      await migrateUser(user.id, plainEmail, plainName)
+      return {
+        ...user,
+        email: plainEmail,
+        name: plainName,
+      } as any
+    },
+    async updateUser(userData) {
+      const data: Record<string, unknown> = { ...userData }
+      delete data.id
+      if (data.email) {
+        data.emailHash = hashValue(data.email as string)
+        data.email = encrypt(data.email as string)
+      }
+      if (data.name) data.name = encrypt(data.name as string)
+      const updated = await prisma.user.update({
+        where: { id: userData.id },
+        data,
+      })
+      return {
+        ...updated,
+        email: decrypt(updated.email!),
+        name: updated.name ? decrypt(updated.name) : null,
+      } as any
     },
   },
   session: { strategy: "jwt" },
