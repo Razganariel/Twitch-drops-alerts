@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, useActionState } from "react"
+import { useState, useEffect, useCallback, useRef, useActionState, startTransition } from "react"
 import { signIn } from "next-auth/react"
 import { syncFollowedGames, syncActiveDrops, startGqlDeviceFlow, checkGqlDeviceFlow } from "@/lib/actions/twitch"
 import { Button } from "@/components/ui/button"
@@ -73,7 +73,9 @@ export function TwitchConnectionCard({ connection }: Props) {
       setAutoSync(true)
       const formData = new FormData()
       formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone)
-      dAction(formData)
+      startTransition(() => {
+        dAction(formData)
+      })
     }
   }, [gql.step, dAction])
 
