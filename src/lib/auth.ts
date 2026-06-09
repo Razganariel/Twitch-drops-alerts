@@ -7,18 +7,6 @@ import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { encrypt, decrypt, hashValue } from "@/lib/encryption"
 
-async function migrateUser(userId: string, email: string, name: string | null) {
-  const emailHash = hashValue(email)
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      name: name ? encrypt(name) : null,
-      email: encrypt(email),
-      emailHash,
-    },
-  })
-}
-
 declare module "next-auth" {
   interface Session {
     user: {
@@ -64,24 +52,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async getUserByEmail(email) {
       const emailHash = hashValue(email)
       const user = await prisma.user.findUnique({ where: { emailHash } })
-      if (user) {
-        return {
-          ...user,
-          email: decrypt(user.email!),
-          name: user.name ? decrypt(user.name) : null,
-        } as any
-      }
-
-      const legacyUser = await prisma.user.findUnique({ where: { email } })
-      if (!legacyUser) return null as any
-
-      const plainEmail = legacyUser.email!
-      const plainName = legacyUser.name
-      await migrateUser(legacyUser.id, plainEmail, plainName)
+      if (!user) return null as any
       return {
-        ...legacyUser,
-        email: plainEmail,
-        name: plainName,
+        ...user,
+        email: decrypt(user.email!),
+        name: user.name ? decrypt(user.name) : null,
       } as any
     },
     async getUserByAccount({ provider, providerAccountId }) {
@@ -91,20 +66,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       })
       if (!account) return null as any
       const user = account.user
-      if (user.emailHash) {
-        return {
-          ...user,
-          email: decrypt(user.email!),
-          name: user.name ? decrypt(user.name) : null,
-        } as any
-      }
-      const plainEmail = user.email!
-      const plainName = user.name
-      await migrateUser(user.id, plainEmail, plainName)
       return {
         ...user,
-        email: plainEmail,
-        name: plainName,
+        email: user.email ? decrypt(user.email) : null,
+        name: user.name ? decrypt(user.name) : null,
       } as any
     },
     async updateUser(userData) {
@@ -156,20 +121,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             image: user.image,
           }
         }
-
-        const legacyUser = await prisma.user.findUnique({ where: { email } })
-        if (!legacyUser || !legacyUser.password) return null
-        const isValidLegacy = await bcrypt.compare(password, legacyUser.password)
-        if (!isValidLegacy) return null
-        const plainEmail = legacyUser.email!
-        const plainName = legacyUser.name
-        await migrateUser(legacyUser.id, plainEmail, plainName)
-        return {
-          id: legacyUser.id,
-          email: plainEmail,
-          name: plainName,
-          image: legacyUser.image,
-        }
+        return null
       },
     }),
     Twitch({
