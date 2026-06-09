@@ -5,6 +5,19 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 
 import { prisma } from "@/lib/prisma"
+import { encrypt, decrypt, hashValue } from "@/lib/encryption"
+
+async function migrateUser(userId: string, email: string, name: string | null) {
+  const emailHash = hashValue(email)
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name: name ? encrypt(name) : null,
+      email: encrypt(email),
+      emailHash,
+    },
+  })
+}
 
 declare module "next-auth" {
   interface Session {
@@ -26,9 +39,35 @@ type TwitchProfile = {
   data?: Array<{ id: string; login: string; display_name: string; email?: string; profile_image_url?: string }>
 }
 
+const baseAdapter = PrismaAdapter(prisma)
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
-  adapter: PrismaAdapter(prisma),
+  adapter: {
+    ...baseAdapter,
+    async createUser(userData) {
+      const emailHash = userData.email ? hashValue(userData.email) : null
+      const created = await prisma.user.create({
+        data: {
+          ...userData,
+          name: userData.name ? encrypt(userData.name) : null,
+          email: userData.email ? encrypt(userData.email) : null,
+          emailHash,
+        },
+      })
+      return {
+        ...created,
+        email: userData.email,
+        name: userData.name,
+      } as any
+    },
+    async getUserByEmail(email) {
+      const emailHash = hashValue(email)
+      const user = await prisma.user.findUnique({ where: { emailHash } })
+      if (user) return user as any
+      return prisma.user.findUnique({ where: { email } }) as any
+    },
+  },
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -45,17 +84,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           password: string
         }
 
-        const user = await prisma.user.findUnique({ where: { email } })
-        if (!user || !user.password) return null
+        const emailHash = hashValue(email)
+        const user = await prisma.user.findUnique({ where: { emailHash } })
 
-        const isValid = await bcrypt.compare(password, user.password)
-        if (!isValid) return null
+        if (user) {
+          if (!user.password) return null
+          const isValid = await bcrypt.compare(password, user.password)
+          if (!isValid) return null
+          return {
+            id: user.id,
+            email: user.email ? decrypt(user.email) : null,
+            name: user.name ? decrypt(user.name) : null,
+            image: user.image,
+          }
+        }
 
+        const legacyUser = await prisma.user.findUnique({ where: { email } })
+        if (!legacyUser || !legacyUser.password) return null
+        const isValidLegacy = await bcrypt.compare(password, legacyUser.password)
+        if (!isValidLegacy) return null
+        const plainEmail = legacyUser.email!
+        const plainName = legacyUser.name
+        await migrateUser(legacyUser.id, plainEmail, plainName)
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
+          id: legacyUser.id,
+          email: plainEmail,
+          name: plainName,
+          image: legacyUser.image,
         }
       },
     }),

@@ -31,6 +31,10 @@ export function decrypt(ciphertext: string): string {
   return decipher.update(data) + decipher.final("utf8")
 }
 
+export function hashValue(value: string): string {
+  return crypto.createHash("sha256").update(value.toLowerCase()).digest("hex")
+}
+
 export function maskValue(value: string): string {
   if (value.length <= 8) return value.slice(0, 2) + "****"
   return value.slice(0, 4) + "****" + value.slice(-4)

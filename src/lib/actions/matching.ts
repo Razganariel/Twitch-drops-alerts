@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { normalize } from "@/lib/utils"
+import { decrypt } from "@/lib/encryption"
 import { sendDropAlert } from "@/services/email"
 
 export async function matchDrops() {
@@ -15,6 +16,8 @@ export async function matchDrops() {
   })
 
   if (!user?.email) return { ok: false, message: "Aucun email sur le compte" } as const
+
+  const userEmail = decrypt(user.email)
 
   const userGames = await prisma.userGame.findMany({
     where: { userId: session.user.id, isAlertEnabled: true, deletedAt: null },
@@ -70,7 +73,7 @@ export async function matchDrops() {
 
     try {
       await sendDropAlert({
-        to: user.email,
+        to: userEmail,
         gameName: drop.gameName,
         gameBoxArtUrl: drop.gameBoxArtUrl,
         gameSteamAppId: matchedGame.game.steamAppId,

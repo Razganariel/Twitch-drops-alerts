@@ -3,6 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg"
 import { getActiveDropCampaigns, getDropCampaignDetails } from "../services/twitch"
 import { parseTwitchDate } from "./timezone"
 import { normalize } from "./utils"
+import { decrypt } from "./encryption"
 import { type AlertJobData } from "./queue"
 
 const prisma = new PrismaClient({
@@ -14,7 +15,7 @@ export async function runPeriodicSync() {
 
   const users = await prisma.user.findMany({
     where: {
-      email: { not: null },
+      emailHash: { not: null },
     },
     include: {
       twitchConnection: true,
@@ -25,6 +26,7 @@ export async function runPeriodicSync() {
   const connectedUsers = users.filter(
     (u) =>
       u.email &&
+      u.emailHash &&
       u.steamConnection &&
       u.twitchConnection?.gqlAccessToken
   )
@@ -213,7 +215,7 @@ export async function runPeriodicSync() {
 
       const alertData = {
         userId: user.id,
-        email: user.email!,
+        email: decrypt(user.email!),
         gameName: drop.gameName,
         gameBoxArtUrl: drop.gameBoxArtUrl,
         gameSteamAppId: matchedGame.game.steamAppId,
