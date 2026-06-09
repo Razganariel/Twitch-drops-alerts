@@ -37,7 +37,7 @@ export function hashValue(value: string): string {
 
 export function maskValue(value: string): string {
   if (value.length <= 8) return value.slice(0, 2) + "****"
-  return value.slice(0, 4) + "****" + value.slice(-4)
+  return value.slice(0, 3) + "******" + value.slice(-3)
 }
 
 export function generateEncryptionKey(): string {

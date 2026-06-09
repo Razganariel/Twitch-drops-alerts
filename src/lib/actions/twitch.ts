@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { decrypt } from "@/lib/encryption"
 import { parseTwitchDate } from "@/lib/timezone"
 import {
   getFollowedStreams,
@@ -206,7 +207,7 @@ export async function syncActiveDrops(
   })
 
   const gqlToken = await getValidGqlToken(session.user.id)
-  const twitchLogin = gqlConnection?.twitchLogin ?? null
+  const twitchLogin = gqlConnection?.twitchLogin ? decrypt(gqlConnection.twitchLogin) : null
 
   if (!gqlToken) {
     return {

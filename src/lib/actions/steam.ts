@@ -43,8 +43,10 @@ export async function connectSteam(
       } else {
         steamId = await resolveSteamVanityUrl(username, effectiveApiKey)
       }
-    } else {
-      steamId = steamIdInput || existing?.steamId || null
+    } else if (steamIdInput) {
+      steamId = steamIdInput
+    } else if (existing?.steamId) {
+      steamId = decrypt(existing.steamId)
     }
 
     if (!steamId) return { ok: false, message: "ID Steam requis" }
@@ -92,13 +94,13 @@ export async function connectSteam(
     await prisma.steamConnection.upsert({
       where: { userId: session.user.id },
       update: {
-        steamId,
+        steamId: encrypt(steamId),
         steamApiKey: encryptedKey,
         lastSyncedAt: new Date(),
       },
       create: {
         userId: session.user.id,
-        steamId,
+        steamId: encrypt(steamId),
         steamApiKey: encryptedKey,
         lastSyncedAt: new Date(),
       },

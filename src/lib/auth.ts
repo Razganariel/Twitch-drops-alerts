@@ -134,11 +134,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account?.provider === "twitch" && user && profile) {
         const p = profile as TwitchProfile
         const twitchLogin = p.preferred_username ?? p.data?.[0]?.login ?? ""
+        const encryptedLogin = encrypt(twitchLogin)
         await prisma.twitchConnection.upsert({
           where: { userId: user.id as string },
           update: {
             twitchId: account.providerAccountId,
-            twitchLogin,
+            twitchLogin: encryptedLogin,
             accessToken: account.access_token ?? undefined,
             refreshToken: account.refresh_token ?? undefined,
             expiresAt: account.expires_at ? new Date(account.expires_at * 1000) : undefined,
@@ -146,7 +147,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           create: {
             userId: user.id as string,
             twitchId: account.providerAccountId,
-            twitchLogin,
+            twitchLogin: encryptedLogin,
             accessToken: account.access_token ?? undefined,
             refreshToken: account.refresh_token ?? undefined,
             expiresAt: account.expires_at ? new Date(account.expires_at * 1000) : undefined,
