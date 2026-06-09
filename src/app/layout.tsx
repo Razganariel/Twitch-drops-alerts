@@ -15,34 +15,36 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
-const siteUrl = process.env.AUTH_URL || "https://twitch-drops-alerts.duckdns.org"
+export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = process.env.AUTH_URL || "https://twitch-drops-alerts.duckdns.org"
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "Twitch Drops Alerts",
-    template: "%s — Twitch Drops Alerts",
-  },
-  description:
-    "Ne ratez plus aucun drop Twitch. Connectez vos comptes Twitch et Steam, et recevez une alerte personnalisée quand un drop correspond à votre bibliothèque de jeux.",
-  openGraph: {
-    title: "Twitch Drops Alerts",
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: "Twitch Drops Alerts",
+      template: "%s — Twitch Drops Alerts",
+    },
     description:
-      "Ne ratez plus aucun drop Twitch. Recevez une alerte quand un drop correspond à votre bibliothèque Steam.",
-    url: siteUrl,
-    siteName: "Twitch Drops Alerts",
-    locale: "fr_FR",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Twitch Drops Alerts",
-    description:
-      "Ne ratez plus aucun drop Twitch. Recevez une alerte quand un drop correspond à votre bibliothèque Steam.",
-  },
-  icons: {
-    icon: "/favicon.svg",
-  },
+      "Ne ratez plus aucun drop Twitch. Connectez vos comptes Twitch et Steam, et recevez une alerte personnalisée quand un drop correspond à votre bibliothèque de jeux.",
+    openGraph: {
+      title: "Twitch Drops Alerts",
+      description:
+        "Ne ratez plus aucun drop Twitch. Recevez une alerte quand un drop correspond à votre bibliothèque Steam.",
+      url: siteUrl,
+      siteName: "Twitch Drops Alerts",
+      locale: "fr_FR",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Twitch Drops Alerts",
+      description:
+        "Ne ratez plus aucun drop Twitch. Recevez une alerte quand un drop correspond à votre bibliothèque Steam.",
+    },
+    icons: {
+      icon: "/favicon.svg",
+    },
+  }
 }
 
 export default function RootLayout({
