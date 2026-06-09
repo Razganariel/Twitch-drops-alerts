@@ -50,7 +50,9 @@ export async function runPeriodicSync() {
   }
 
   const firstGqlToken = dueUsers[0].twitchConnection?.gqlAccessToken
-  const firstTwitchLogin = dueUsers[0].twitchConnection?.twitchLogin ?? null
+  const firstTwitchLogin = dueUsers[0].twitchConnection?.twitchLogin
+    ? decrypt(dueUsers[0].twitchConnection.twitchLogin)
+    : null
   if (!firstGqlToken) {
     console.log("[sync] Aucun token GQL disponible")
     return { ok: false, count: 0 }
