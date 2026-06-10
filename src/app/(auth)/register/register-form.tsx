@@ -11,6 +11,18 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 
+function InlineCheckbox({ id, name, required }: { id: string; name: string; required?: boolean }) {
+  return (
+    <input
+      type="checkbox"
+      id={id}
+      name={name}
+      required={required}
+      className="mt-1 h-4 w-4 shrink-0 rounded border border-input accent-primary"
+    />
+  )
+}
+
 export function RegisterForm({ twitchEnabled }: { twitchEnabled: boolean }) {
   const router = useRouter()
 
@@ -59,6 +71,15 @@ export function RegisterForm({ twitchEnabled }: { twitchEnabled: boolean }) {
             <div className="grid gap-2">
               <Label htmlFor="password">Mot de passe</Label>
               <Input id="password" name="password" type="password" required suppressHydrationWarning />
+            </div>
+            <div className="flex items-start gap-2">
+              <InlineCheckbox id="accept-tos" name="acceptTos" required />
+              <Label htmlFor="accept-tos" className="text-sm text-muted-foreground leading-relaxed">
+                J&apos;accepte les{" "}
+                <Link href="/tos" className="underline underline-offset-2 hover:text-foreground">
+                  Conditions Générales d&apos;Utilisation
+                </Link>
+              </Label>
             </div>
             {error && (
               <p className="text-sm text-destructive">{error}</p>

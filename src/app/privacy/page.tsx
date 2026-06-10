@@ -120,7 +120,7 @@ export default function PrivacyPage() {
               monétisation des données utilisateurs.
             </p>
             <p>
-              Ce projet est open source sous licence GPL-3. Vous pouvez
+              Ce projet est open source sous licence AGPL-3. Vous pouvez
               consulter le code source, vérifier ce que fait l&apos;application,
               et même l&apos;exécuter sur votre propre serveur si vous le
               souhaitez.
@@ -174,10 +174,10 @@ export default function PrivacyPage() {
             &copy; {new Date().getFullYear()} Twitch Drops Alerts.{" "}
             Sous licence{" "}
             <Link
-              href="https://www.gnu.org/licenses/gpl-3.0.html"
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
               className="underline underline-offset-2 hover:text-foreground transition-colors"
             >
-              GPL-3
+              AGPL-3
             </Link>
             .
           </p>

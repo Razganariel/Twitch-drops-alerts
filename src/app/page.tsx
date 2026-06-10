@@ -201,14 +201,20 @@ export default async function Home() {
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} Twitch Drops Alerts.             Sous licence{" "}
             <Link
-              href="https://www.gnu.org/licenses/gpl-3.0.html"
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
               className="underline underline-offset-2 hover:text-foreground transition-colors"
             >
-              GPL-3
+              AGPL-3
             </Link>
             .
           </p>
           <div className="flex items-center gap-4">
+            <Link
+              href="/tos"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              CGU
+            </Link>
             <Link
               href="/privacy"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
