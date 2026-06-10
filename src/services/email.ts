@@ -212,6 +212,27 @@ function buildHtml(params: {
 </html>`
 }
 
+export async function sendEmail({ to, subject, text }: { to: string; subject: string; text: string }) {
+  const client = getResend()
+  const transport = getSmtpTransport()
+
+  if (!client && !transport) {
+    console.warn(
+      `[email] No email provider configured. Set RESEND_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS.`
+    )
+    return
+  }
+
+  const from = process.env.EMAIL_FROM ?? "Twitch Drops Alerts <noreply@default.com>"
+
+  if (client) {
+    await client.emails.send({ from, to, subject, html: text.replace(/\n/g, "<br>") })
+    return
+  }
+
+  await transport!.sendMail({ from, to, subject, text })
+}
+
 export async function sendDropAlert(params: {
   to: string
   gameName: string

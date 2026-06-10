@@ -45,6 +45,7 @@ model User {
   userGames        UserGame[]
   twitchFollowedGames TwitchFollowedGame[]
   alerts           Alert[]
+  otpCodes         OtpCode[]
 }
 
 model Account {
@@ -172,6 +173,19 @@ model TwitchDrop {
 
   alerts Alert[]
   dropItems DropItem[]
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  codeHash  String
+  purpose   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
 }
 
 model Alert {
