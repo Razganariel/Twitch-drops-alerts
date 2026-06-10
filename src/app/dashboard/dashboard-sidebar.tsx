@@ -59,6 +59,13 @@ export function DashboardSidebar({ unreadCount }: Props) {
   const secondaryNav = (
     <nav className="flex flex-col gap-2 shrink-0">
       <Link
+        href="/tos"
+        className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+        onClick={() => setOpen(false)}
+      >
+        CGU
+      </Link>
+      <Link
         href="/privacy"
         className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
         onClick={() => setOpen(false)}
