@@ -21,7 +21,7 @@ export function DashboardSidebar({ unreadCount }: Props) {
   }, [])
 
   const nav = (
-    <nav className="flex flex-col gap-2 overflow-y-auto">
+    <nav className="flex flex-col gap-2">
       <Link
         href="/dashboard"
         className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
@@ -53,6 +53,11 @@ export function DashboardSidebar({ unreadCount }: Props) {
       >
         Paramètres
       </Link>
+    </nav>
+  )
+
+  const secondaryNav = (
+    <nav className="flex flex-col gap-2 shrink-0">
       <Link
         href="/privacy"
         className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
@@ -91,9 +96,15 @@ export function DashboardSidebar({ unreadCount }: Props) {
           </button>
         </div>
 
-        {nav}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {nav}
+        </div>
 
-        <div className="mt-auto pt-4 border-t shrink-0 space-y-2">
+        <div className="pt-4 border-t mb-4">
+          {secondaryNav}
+        </div>
+
+        <div className="shrink-0 space-y-2 pt-4 border-t">
           <ModeToggle />
           <LogoutButton />
         </div>
