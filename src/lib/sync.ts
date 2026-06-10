@@ -1,9 +1,10 @@
 import { PrismaClient } from "../generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { getActiveDropCampaigns, getDropCampaignDetails } from "../services/twitch"
+import { getSyncGqlToken } from "../services/sync-account"
 import { parseTwitchDate } from "./timezone"
 import { normalize } from "./utils"
-import { decrypt, safeDecrypt } from "./encryption"
+import { safeDecrypt } from "./encryption"
 import { type AlertJobData } from "./queue"
 
 const prisma = new PrismaClient({
@@ -49,18 +50,15 @@ export async function runPeriodicSync() {
     return { ok: true, count: 0 }
   }
 
-  const firstGqlToken = dueUsers[0].twitchConnection?.gqlAccessToken
-  const firstTwitchLogin = dueUsers[0].twitchConnection?.twitchLogin
-    ? decrypt(dueUsers[0].twitchConnection.twitchLogin)
-    : null
-  if (!firstGqlToken) {
-    console.log("[sync] Aucun token GQL disponible")
+  const gqlToken = await getSyncGqlToken()
+  if (!gqlToken) {
+    console.log("[sync] Aucun token de service disponible")
     return { ok: false, count: 0 }
   }
 
   let campaigns
   try {
-    campaigns = await getActiveDropCampaigns(firstGqlToken)
+    campaigns = await getActiveDropCampaigns(gqlToken)
   } catch (e) {
     console.error("[sync] Échec de la récupération des drops:", e)
     return { ok: false, count: 0 }
@@ -83,9 +81,9 @@ export async function runPeriodicSync() {
 
     let items = campaign.timeBasedDrops ?? []
 
-    if (items.length === 0 && firstGqlToken && firstTwitchLogin) {
+    if (items.length === 0 && gqlToken) {
       try {
-        const details = await getDropCampaignDetails(firstGqlToken, campaign.id, firstTwitchLogin)
+        const details = await getDropCampaignDetails(gqlToken, campaign.id, "twitchdropsalert_bot")
         if (details?.timeBasedDrops) {
           items = details.timeBasedDrops
         }
