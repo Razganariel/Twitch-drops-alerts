@@ -7,6 +7,8 @@ import { DashboardPreferencesForm } from "./dashboard-preferences-form"
 import { decrypt, maskValue } from "@/lib/encryption"
 import { TwitchConnectionCard } from "./twitch-card"
 import { SteamConnectionCard } from "./steam-card"
+import { DownloadCard } from "./download-card"
+import { DeleteAccountCard } from "./delete-card"
 
 const twitchMessages: Record<string, string> = {
   success: "Connexion Twitch réussie",
@@ -120,6 +122,9 @@ export default async function SettingsPage(props: {
             : null
         }
       />
+
+      <DownloadCard />
+      <DeleteAccountCard />
     </div>
   )
 }
