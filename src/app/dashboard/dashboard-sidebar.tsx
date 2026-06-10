@@ -53,6 +53,13 @@ export function DashboardSidebar({ unreadCount }: Props) {
       >
         Paramètres
       </Link>
+      <Link
+        href="/privacy"
+        className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+        onClick={() => setOpen(false)}
+      >
+        Confidentialité
+      </Link>
     </nav>
   )
 
