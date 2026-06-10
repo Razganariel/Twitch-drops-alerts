@@ -8,6 +8,7 @@
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
     "worker": "tsx src/worker.ts",
+    "setup:sync-account": "tsx scripts/setup-sync-account.ts",
     "db:setup": "prisma generate && prisma db push",
     "postinstall": "prisma generate"
   },

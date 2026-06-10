@@ -143,15 +143,15 @@ export function TwitchConnectionCard({ connection }: Props) {
               )}
             </div>
 
-            <div>
-              {connection!.activeDropsCount > 0 && (
+            {connection!.activeDropsCount > 0 && (
                 <p className="text-sm text-muted-foreground mb-2">
                   {connection!.activeDropsCount} campagne
                   {connection!.activeDropsCount > 1 ? "s" : ""} de drops active
-                  {connection!.activeDropsCount > 1 ? "s" : ""} en base
+                  {connection!.activeDropsCount > 1 ? "s" : ""}s en base
                 </p>
               )}
 
+              <div className="hidden">
               {needsGqlAuth && gql.step === "idle" ? (
                 <Button variant="secondary" className="w-full" onClick={handleGqlAuth}>
                   Autoriser l&apos;accès aux drops

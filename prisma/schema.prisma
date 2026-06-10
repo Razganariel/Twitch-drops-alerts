@@ -7,6 +7,15 @@ datasource db {
   provider = "postgresql"
 }
 
+model SyncAccount {
+  id           String    @id @default(cuid())
+  service      String    @unique
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  updatedAt    DateTime  @updatedAt
+}
+
 enum AlertStatus {
   SENT
   READ
