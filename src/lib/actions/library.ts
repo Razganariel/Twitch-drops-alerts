@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { encrypt } from "@/lib/encryption"
 import { getGameDetails, getSteamLogoUrl } from "@/services/steam"
 
 export async function toggleGameAlert(formData: FormData) {
@@ -96,7 +97,7 @@ export async function addGameToLibrary(formData: FormData) {
     update: {},
     create: {
       steamAppId,
-      name: details.name,
+      name: encrypt(details.name),
       logoUrl: getSteamLogoUrl(steamAppId),
     },
   })
