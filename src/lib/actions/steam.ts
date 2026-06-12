@@ -74,12 +74,12 @@ export async function connectSteam(
       await prisma.game.upsert({
         where: { steamAppId: game.appid },
         update: {
-          name: game.name,
+          name: encrypt(game.name),
           logoUrl: getSteamLogoUrl(game.appid, game.img_logo_url),
         },
         create: {
           steamAppId: game.appid,
-          name: game.name,
+          name: encrypt(game.name),
           logoUrl: getSteamLogoUrl(game.appid, game.img_logo_url),
         },
       })

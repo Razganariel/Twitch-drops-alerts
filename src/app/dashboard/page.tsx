@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
+import { safeDecrypt } from "@/lib/encryption"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { LayoutGrid, List } from "lucide-react"
@@ -62,7 +63,7 @@ export default async function DashboardPage(props: {
   const view = overrideView === "list" ? "list" : overrideView === "grid" ? "grid" : user.dashboardView === "LIST" ? "list" : "grid"
   const filter = overrideFilter === "all" ? "all" : overrideFilter === "match" ? "match" : user.dashboardFilter === "ALL" ? "all" : "match"
 
-  const matchedNames = new Set(userGames.map((ug) => ug.game.name.toLowerCase().trim()))
+  const matchedNames = new Set(userGames.map((ug) => safeDecrypt(ug.game.name).toLowerCase().trim()))
 
   function isMatch(name: string) {
     return matchedNames.has(name.toLowerCase().trim())

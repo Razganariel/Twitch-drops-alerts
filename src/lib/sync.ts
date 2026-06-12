@@ -185,7 +185,7 @@ export async function runPeriodicSync() {
       const dropGameName = normalize(drop.gameName)
 
       const matchedGame = userGames.find(
-        (ug) => normalize(ug.game.name) === dropGameName
+        (ug) => normalize(safeDecrypt(ug.game.name)) === dropGameName
       )
 
       if (!matchedGame) continue

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
+import { safeDecrypt } from "@/lib/encryption"
 import { Prisma } from "@/generated/prisma/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -144,7 +145,7 @@ export default async function AlertsPage(props: {
   else if (statusFilter === "READ") statusWhere = { status: "READ" }
   const where = { ...whereBase, ...statusWhere }
 
-  const [activeAlerts, endedAlerts, activeCount, endedCount] = await Promise.all([
+  const [rawActive, rawEnded, activeCount, endedCount] = await Promise.all([
     prisma.alert.findMany({
       where: { ...where, drop: { isActive: true } },
       include: { game: true, drop: true },
@@ -160,6 +161,16 @@ export default async function AlertsPage(props: {
     prisma.alert.count({ where: { ...where, drop: { isActive: true } } }),
     prisma.alert.count({ where: { ...where, drop: { isActive: false } } }),
   ])
+
+  const activeAlerts = rawActive.map((a) => ({
+    ...a,
+    game: { ...a.game, name: safeDecrypt(a.game.name) },
+  }))
+
+  const endedAlerts = rawEnded.map((a) => ({
+    ...a,
+    game: { ...a.game, name: safeDecrypt(a.game.name) },
+  }))
 
   const totalPages = Math.ceil(activeCount / PER_PAGE)
   const hasUnread = statusFilter !== "READ"

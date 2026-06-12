@@ -80,6 +80,9 @@ export function SteamConnectionCard({
                   </span>
                 )}
               </Button>
+              <p className="text-xs text-muted-foreground leading-relaxed italic">
+                L&apos;API Steam ne fonctionne que si ta bibliothèque est publique et ne permet pas de distinguer les jeux masqués ou privés. Le nom des jeux est donc chiffré en base de données.
+              </p>
             </div>
           ) : (
             <>

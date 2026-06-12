@@ -56,7 +56,7 @@ export async function downloadUserData(code: string) {
         : null,
     },
     gameLibrary: user.userGames.map((ug) => ({
-      name: ug.game.name,
+      name: safeDecrypt(ug.game.name),
       steamAppId: ug.game.steamAppId,
       alertsEnabled: ug.isAlertEnabled,
     })),

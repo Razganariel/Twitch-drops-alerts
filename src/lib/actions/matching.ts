@@ -42,7 +42,7 @@ export async function matchDrops() {
     const dropGameName = normalize(drop.gameName)
 
     const matchedGame = userGames.find((ug) => {
-      const gameName = normalize(ug.game.name)
+      const gameName = normalize(safeDecrypt(ug.game.name))
       return gameName === dropGameName
     })
 
