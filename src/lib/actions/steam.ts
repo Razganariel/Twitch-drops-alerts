@@ -51,16 +51,23 @@ export async function connectSteam(
 
     if (!steamId) return { ok: false, message: "ID Steam requis" }
 
-    const games = await getSteamLibrary(steamId, effectiveApiKey)
+    const rawGames = await getSteamLibrary(steamId, effectiveApiKey)
 
-    const existingSteamIds = new Set(
-      (await prisma.userGame.findMany({
-        where: { userId: session.user.id },
-        select: { game: { select: { steamAppId: true } } },
-      })).map((ug) => ug.game.steamAppId)
-    )
+    const games = rawGames.filter((g) => {
+      const lower = g.name.toLowerCase()
+      return !lower.includes("demo") && !lower.includes("playtest")
+    })
 
+    const apiAppIds = new Set(games.map((g) => g.appid))
+
+    const existingUserGames = await prisma.userGame.findMany({
+      where: { userId: session.user.id },
+      select: { gameId: true, game: { select: { id: true, steamAppId: true } } },
+    })
+
+    const existingSteamIds = new Set(existingUserGames.map((e) => e.game.steamAppId))
     const beforeCount = existingSteamIds.size
+
     const newGames = games.filter((g) => !existingSteamIds.has(g.appid))
 
     for (const game of games) {
@@ -89,6 +96,35 @@ export async function connectSteam(
       }
     }
 
+    const removedEntries = existingUserGames.filter(
+      (e) => !apiAppIds.has(e.game.steamAppId)
+    )
+    const removedGameIds = removedEntries.map((e) => e.game.id)
+    const removedCount = removedEntries.length
+
+    if (removedGameIds.length > 0) {
+      await prisma.userGame.deleteMany({
+        where: {
+          userId: session.user.id,
+          gameId: { in: removedGameIds },
+        },
+      })
+
+      const orphanedGames = await prisma.game.findMany({
+        where: {
+          id: { in: removedGameIds },
+          userGames: { none: {} },
+          alerts: { none: {} },
+        },
+      })
+
+      if (orphanedGames.length > 0) {
+        await prisma.game.deleteMany({
+          where: { id: { in: orphanedGames.map((g) => g.id) } },
+        })
+      }
+    }
+
     const encryptedKey = encrypt(effectiveApiKey)
 
     await prisma.steamConnection.upsert({
@@ -107,11 +143,19 @@ export async function connectSteam(
     })
 
     const newCount = newGames.length
-    const message = beforeCount === 0
-      ? `${games.length} jeux importés`
-      : newCount > 0
-        ? `${newCount} nouveau${newCount > 1 ? "x" : ""} importé${newCount > 1 ? "s" : ""}`
-        : "Aucun nouveau jeu"
+    let message: string
+    if (beforeCount === 0) {
+      message = `${games.length} jeux importés`
+    } else {
+      const parts: string[] = []
+      if (newCount > 0) {
+        parts.push(`${newCount} nouveau${newCount > 1 ? "x" : ""}`)
+      }
+      if (removedCount > 0) {
+        parts.push(`${removedCount} retiré${removedCount > 1 ? "s" : ""}`)
+      }
+      message = parts.length > 0 ? parts.join(", ") : "Aucun changement"
+    }
     return { ok: true, message, gameCount: games.length, steamId: maskValue(steamId) }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue"
