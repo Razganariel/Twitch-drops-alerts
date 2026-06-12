@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Bell, BellOff, BellRing, Mail, MailCheck, ChevronDown, ChevronUp, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,10 @@ type Props = {
 export function CampaignRow({ campaign }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [localAlert, setLocalAlert] = useState(campaign.alert)
+
+  useEffect(() => {
+    setLocalAlert(campaign.alert)
+  }, [campaign.alert])
 
   async function handleMarkRead(alertId: string) {
     await markAlertAsRead(alertId)

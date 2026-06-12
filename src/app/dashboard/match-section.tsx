@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState } from "react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { matchDrops } from "@/lib/actions/matching"
 import { Button } from "@/components/ui/button"
 
@@ -11,7 +12,10 @@ type Props = {
 }
 
 export function MatchSection({ hasSteam, hasTwitch, alertCount }: Props) {
-  const [result, action, isPending] = useActionState(matchDrops, null)
+  const router = useRouter()
+  const [isPending, setPending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [isError, setError] = useState(false)
 
   if (!hasTwitch || !hasSteam) return null
 
@@ -23,15 +27,23 @@ export function MatchSection({ hasSteam, hasTwitch, alertCount }: Props) {
             ? `${alertCount} alerte${alertCount > 1 ? "s" : ""}`
             : "Aucune alerte pour le moment"}
         </p>
-        <form action={action}>
+        <form action={async () => {
+          setPending(true)
+          setMessage(null)
+          const result = await matchDrops()
+          router.refresh()
+          setMessage(result.message)
+          setError(!result.ok)
+          setPending(false)
+        }}>
           <Button variant="secondary" size="sm" disabled={isPending}>
             {isPending ? "Analyse..." : "Lancer le matching"}
           </Button>
         </form>
       </div>
-      {result && (
-        <p className={`text-sm ${result.ok ? "text-emerald-600" : "text-destructive"}`}>
-          {result.message}
+      {message && (
+        <p className={`text-sm ${isError ? "text-destructive" : "text-emerald-600"}`}>
+          {message}
         </p>
       )}
     </div>
