@@ -9,9 +9,10 @@ import { LogoutButton } from "./logout-button"
 
 type Props = {
   unreadCount: number
+  isAdmin: boolean
 }
 
-export function DashboardSidebar({ unreadCount }: Props) {
+export function DashboardSidebar({ unreadCount, isAdmin }: Props) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -53,6 +54,15 @@ export function DashboardSidebar({ unreadCount }: Props) {
       >
         Paramètres
       </Link>
+      {isAdmin && (
+        <Link
+          href="/dashboard/admin"
+          className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+          onClick={() => setOpen(false)}
+        >
+          Administration
+        </Link>
+      )}
     </nav>
   )
 
