@@ -215,15 +215,18 @@ export async function pollDeviceFlow(
   return response.json()
 }
 
-export async function refreshGqlToken(refreshToken: string) {
+export async function refreshGqlToken(refreshToken: string, clientSecret?: string) {
+  const params: Record<string, string> = {
+    client_id: TWITCH_ANDROID_CLIENT_ID,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  }
+  if (clientSecret) params.client_secret = clientSecret
+
   const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: TWITCH_ANDROID_CLIENT_ID,
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-    }),
+    body: new URLSearchParams(params),
   })
 
   if (!response.ok) {
