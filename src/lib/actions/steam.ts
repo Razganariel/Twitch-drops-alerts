@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { encrypt, decrypt, maskValue } from "@/lib/encryption"
 import { getSteamLibrary, resolveSteamVanityUrl, getSteamLogoUrl } from "@/services/steam"
+import { matchDrops } from "./matching"
 
 export type ConnectSteamResult = {
   ok: boolean
@@ -156,6 +157,11 @@ export async function connectSteam(
       }
       message = parts.length > 0 ? parts.join(", ") : "Aucun changement"
     }
+
+    const matchResult = await matchDrops()
+    const matchMessage = matchResult.ok ? matchResult.message : `Matching: ${matchResult.message}`
+    message += `, ${matchMessage}`
+
     return { ok: true, message, gameCount: games.length, steamId: maskValue(steamId) }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue"
