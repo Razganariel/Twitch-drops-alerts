@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Power, PowerOff } from "lucide-react"
+import { Power, PowerOff, Pencil } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getSettings, saveSetting, testSetting, toggleMaintenance } from "@/lib/actions/admin"
+import { getSettings, saveSetting, testSetting, toggleMaintenance, getEnvSettings } from "@/lib/actions/admin"
 import { Loader2, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react"
 
 type SettingEntry = {
@@ -33,22 +33,7 @@ const SETTING_META: Record<string, { label: string; secret: boolean }> = {
   SMTP_PASS: { label: "Mot de passe SMTP", secret: true },
 }
 
-const ENV_SETTINGS = [
-  { key: "DATABASE_URL", label: "URL de la base de données" },
-  { key: "REDIS_URL", label: "URL Redis" },
-]
 
-function maskEnv(value: string) {
-  try {
-    const url = new URL(value)
-    if (url.password) url.password = "******"
-    if (url.username) url.username = "******"
-    return url.toString()
-  } catch {
-    if (value.length > 8) return value.slice(0, 4) + "******" + value.slice(-4)
-    return "******"
-  }
-}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -61,12 +46,20 @@ export default function AdminPage() {
   const [testResult, setTestResult] = useState<{ key: string; result: TestResult } | null>(null)
   const [showSecrets, setShowSecrets] = useState<Set<string>>(new Set())
   const [maintenanceActive, setMaintenanceActive] = useState(false)
+  const [smtpEditing, setSmtpEditing] = useState(false)
+  const [envSettings, setEnvSettings] = useState<{ key: string; label: string; value: string }[]>([])
+  const [smtpHost, setSmtpHost] = useState("")
+  const [smtpPort, setSmtpPort] = useState("")
+  const [smtpUser, setSmtpUser] = useState("")
+  const [smtpPass, setSmtpPass] = useState("")
+  const [savingSmtp, setSavingSmtp] = useState(false)
   const [togglingMaintenance, setTogglingMaintenance] = useState(false)
 
   const loadSettings = useCallback(async () => {
     try {
-      const data = await getSettings()
+      const [data, env] = await Promise.all([getSettings(), getEnvSettings()])
       setSettings(data)
+      setEnvSettings(env)
       const maint = data.find((s) => s.key === "maintenance")
       setMaintenanceActive(maint?.value === "true")
     } catch {
@@ -136,17 +129,22 @@ export default function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Mode maintenance</CardTitle>
-          <CardDescription>Activer ou désactiver le mode maintenance de l&apos;application</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between">
+            <CardTitle>Mode maintenance</CardTitle>
+            {maintenanceActive ? (
+              <Badge variant="destructive">Maintenance active</Badge>
+            ) : (
+              <Badge variant="secondary">Maintenance inactive</Badge>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <CardDescription>Activer ou désactiver le mode maintenance de l&apos;application</CardDescription>
             <Button
               variant={maintenanceActive ? "destructive" : "outline"}
               size="sm"
               onClick={handleToggleMaintenance}
               disabled={togglingMaintenance}
-              className="gap-2"
+              className="gap-2 shrink-0"
             >
               {togglingMaintenance ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -157,15 +155,8 @@ export default function AdminPage() {
               )}
               {maintenanceActive ? "Désactiver" : "Activer"}
             </Button>
-            <span className="text-sm">
-              {maintenanceActive ? (
-                <Badge variant="destructive">Maintenance active</Badge>
-              ) : (
-                <Badge variant="secondary">Maintenance inactive</Badge>
-              )}
-            </span>
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
 
       <Card>
@@ -175,7 +166,7 @@ export default function AdminPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {Object.entries(SETTING_META).map(([key, meta]) => {
-            if (key === "maintenance") return null
+            if (key === "maintenance" || key.startsWith("SMTP_")) return null
             const configured = isConfigured(key)
             const isSecret = meta.secret
             const showValue = !isSecret || showSecrets.has(key)
@@ -237,20 +228,105 @@ export default function AdminPage() {
                       {testing === key ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tester"}
                     </Button>
                   )}
-                  {key === "SMTP_HOST" && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleTest("SMTP")}
-                      disabled={testing === "SMTP" || !isConfigured("SMTP_HOST") || !isConfigured("SMTP_USER")}
-                    >
-                      {testing === "SMTP" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tester"}
-                    </Button>
-                  )}
                 </div>
               </div>
             )
           })}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Configuration SMTP</CardTitle>
+            {isConfigured("SMTP_HOST") && isConfigured("SMTP_USER") ? (
+              <Badge variant="outline" className="text-emerald-600 border-emerald-600">Configuré</Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground">Non configuré</Badge>
+            )}
+          </div>
+          <CardDescription>Serveur SMTP pour l&apos;envoi des emails</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {smtpEditing ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Serveur</Label>
+                  <Input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="smtp.example.com" className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Port</Label>
+                  <Input value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} placeholder="587" className="h-9 text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Utilisateur</Label>
+                  <Input value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} placeholder="user@example.com" className="h-9 text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Mot de passe</Label>
+                  <Input value={smtpPass} onChange={(e) => setSmtpPass(e.target.value)} type="password" placeholder="••••••••" className="h-9 text-sm" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" onClick={async () => {
+                  setSavingSmtp(true)
+                  try {
+                    await saveSetting("SMTP_HOST", smtpHost)
+                    await saveSetting("SMTP_PORT", smtpPort || "587")
+                    await saveSetting("SMTP_USER", smtpUser)
+                    if (smtpPass) await saveSetting("SMTP_PASS", smtpPass)
+                    setSmtpEditing(false)
+                    await loadSettings()
+                  } catch {}
+                  setSavingSmtp(false)
+                }} disabled={savingSmtp}>
+                  {savingSmtp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSmtpEditing(false)}>Annuler</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Serveur</Label>
+                  <p className="text-sm font-mono mt-0.5">{getValue("SMTP_HOST") || "Non configuré"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Port</Label>
+                  <p className="text-sm font-mono mt-0.5">{getValue("SMTP_PORT") || "587"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Utilisateur</Label>
+                  <p className="text-sm font-mono mt-0.5">{getValue("SMTP_USER") || "Non configuré"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Mot de passe</Label>
+                  <p className="text-sm font-mono mt-0.5">{isConfigured("SMTP_PASS") ? "••••••••" : "Non configuré"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => {
+                  setSmtpHost(getValue("SMTP_HOST"))
+                  setSmtpPort(getValue("SMTP_PORT") || "587")
+                  setSmtpUser(getValue("SMTP_USER"))
+                  setSmtpPass("")
+                  setSmtpEditing(true)
+                }}>
+                  <Pencil className="h-4 w-4" />
+                  Modifier
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleTest("SMTP")} disabled={testing === "SMTP" || !isConfigured("SMTP_HOST") || !isConfigured("SMTP_USER")}>
+                  {testing === "SMTP" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tester"}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -278,19 +354,16 @@ export default function AdminPage() {
           <CardDescription>Ces paramètres sont lus depuis le fichier .env (lecture seule)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {ENV_SETTINGS.map(({ key, label }) => {
-            const value = process.env[key] ?? ""
-            return (
-              <div key={key} className="flex items-center justify-between gap-4 rounded-md border p-3">
-                <div className="flex-1 min-w-0">
-                  <Label className="text-sm font-medium">{label}</Label>
-                  <p className="text-sm text-muted-foreground truncate font-mono mt-1">
-                    {value ? maskEnv(value) : "Non défini"}
-                  </p>
-                </div>
+          {envSettings.map(({ key, label, value }) => (
+            <div key={key} className="flex items-center justify-between gap-4 rounded-md border p-3">
+              <div className="flex-1 min-w-0">
+                <Label className="text-sm font-medium">{label}</Label>
+                <p className="text-sm text-muted-foreground truncate font-mono mt-1">
+                  {value || "Non défini"}
+                </p>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>
