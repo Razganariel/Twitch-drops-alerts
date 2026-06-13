@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { encrypt, safeDecrypt } from "@/lib/encryption"
 import { testTwitchClientId, testTwitchCredentials, testResend, testSmtp } from "@/services/health"
+import { setMaintenanceValue } from "@/lib/maintenance"
 
 async function requireAdmin() {
   const session = await auth()
@@ -96,6 +97,31 @@ export async function testSetting(key: string) {
   }
 }
 
+export async function getEnvSettings(): Promise<{ key: string; label: string; value: string }[]> {
+  await requireAdmin()
+  const keys = [
+    { key: "DATABASE_URL", label: "URL de la base de données" },
+    { key: "REDIS_URL", label: "URL Redis" },
+  ]
+  return keys.map(({ key, label }) => {
+    const raw = process.env[key] ?? ""
+    const value = raw ? maskEnvUrl(raw) : ""
+    return { key, label, value }
+  })
+}
+
+function maskEnvUrl(value: string): string {
+  try {
+    const url = new URL(value)
+    if (url.password) url.password = "******"
+    if (url.username) url.username = "******"
+    return url.toString()
+  } catch {
+    if (value.length > 8) return value.slice(0, 4) + "******" + value.slice(-4)
+    return "******"
+  }
+}
+
 export async function toggleMaintenance() {
   await requireAdmin()
 
@@ -115,6 +141,8 @@ export async function toggleMaintenance() {
       data: { key: "maintenance", value: newValue },
     })
   }
+
+  setMaintenanceValue(newValue)
 
   return { active: newValue === "true" }
 }

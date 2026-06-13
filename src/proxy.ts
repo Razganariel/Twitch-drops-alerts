@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
+import { getMaintenanceValue } from "@/lib/maintenance"
 
 const allowedInMaintenance = ["/login", "/maintenance"]
 
@@ -18,34 +19,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  try {
-    const baseUrl = new URL(request.url).origin
-    const res = await fetch(`${baseUrl}/api/settings/maintenance`, {
-      headers: { cookie: request.headers.get("cookie") ?? "" },
-    })
-    const { maintenance } = await res.json()
+  if (getMaintenanceValue() === "true") {
+    try {
+      const baseUrl = new URL(request.url).origin
+      const sessionRes = await fetch(`${baseUrl}/api/settings/check-admin`, {
+        headers: { cookie: request.headers.get("cookie") ?? "" },
+      })
+      const { isAdmin } = await sessionRes.json()
+      if (isAdmin) return NextResponse.next()
+    } catch {}
 
-    if (maintenance === "true") {
-      try {
-        const sessionRes = await fetch(`${baseUrl}/api/auth/session`, {
-          headers: { cookie: request.headers.get("cookie") ?? "" },
-        })
-        const session = await sessionRes.json()
-
-        if (session?.user?.id) {
-          const adminRes = await fetch(`${baseUrl}/api/settings/check-admin`, {
-            headers: { cookie: request.headers.get("cookie") ?? "" },
-          })
-          const adminData = await adminRes.json()
-          if (adminData.isAdmin) {
-            return NextResponse.next()
-          }
-        }
-      } catch {}
-
-      return NextResponse.redirect(new URL("/maintenance", request.url))
-    }
-  } catch {}
+    return NextResponse.redirect(new URL("/maintenance", request.url))
+  }
 
   return NextResponse.next()
 }
