@@ -331,21 +331,14 @@ export default function AdminPage() {
       </Card>
 
       {testResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Résultat du test</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {testResult.result.ok ? (
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-destructive" />
-              )}
-              <span className="text-sm">{testResult.result.message}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-2 rounded-md border px-4 py-3">
+          {testResult.result.ok ? (
+            <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+          ) : (
+            <XCircle className="h-5 w-5 text-destructive shrink-0" />
+          )}
+          <span className="text-sm">{testResult.result.message}</span>
+        </div>
       )}
 
       <Card>
