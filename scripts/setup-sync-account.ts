@@ -52,6 +52,10 @@ async function main() {
 
     console.log("✅ Compte de service configuré avec succès !")
     console.log(`   Le token sera refreshé automatiquement.\n`)
+    console.log("─".repeat(50))
+    console.log("Pour déployer ces tokens sur le serveur de prod :")
+    console.log(`  npx tsx scripts/set-sync-tokens.ts "${tokens.access_token}" "${tokens.refresh_token}" ${tokens.expires_in ?? 14400}`)
+    console.log("─".repeat(50))
 
     await prisma.$disconnect()
     process.exit(0)
