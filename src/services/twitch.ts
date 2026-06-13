@@ -3,6 +3,8 @@ const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2"
 const TWITCH_GQL_BASE = "https://gql.twitch.tv/gql"
 const TWITCH_ANDROID_CLIENT_ID = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
 
+import crypto from "node:crypto"
+
 const gqlSessionId = crypto.randomUUID()
 const gqlDeviceId = crypto.randomUUID()
 

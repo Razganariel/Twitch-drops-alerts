@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { normalize } from "@/lib/utils"
-import { decrypt, safeDecrypt } from "@/lib/encryption"
+import { safeDecrypt } from "@/lib/encryption"
 import { sendDropAlert } from "@/services/email"
 
 export async function matchDrops() {
@@ -48,24 +48,6 @@ export async function matchDrops() {
 
     if (!matchedGame) continue
 
-    const existing = await prisma.alert.findFirst({
-      where: {
-        userId: session.user.id,
-        gameId: matchedGame.game.id,
-        dropId: drop.id,
-      },
-    })
-
-    if (existing) continue
-
-    await prisma.alert.create({
-      data: {
-        userId: session.user.id,
-        gameId: matchedGame.game.id,
-        dropId: drop.id,
-      },
-    })
-
     const dropItems = await prisma.dropItem.findMany({
       where: { twitchDropId: drop.id },
       orderBy: { sortOrder: "asc" },
@@ -90,7 +72,26 @@ export async function matchDrops() {
       })
     } catch (e) {
       console.error("[matching] Échec envoi email:", e)
+      continue
     }
+
+    const existing = await prisma.alert.findFirst({
+      where: {
+        userId: session.user.id,
+        gameId: matchedGame.game.id,
+        dropId: drop.id,
+      },
+    })
+
+    if (existing) continue
+
+    await prisma.alert.create({
+      data: {
+        userId: session.user.id,
+        gameId: matchedGame.game.id,
+        dropId: drop.id,
+      },
+    })
 
     matchCount++
   }

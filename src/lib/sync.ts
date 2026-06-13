@@ -1,15 +1,30 @@
-import { PrismaClient } from "../generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-import { getActiveDropCampaigns, getDropCampaignDetails } from "../services/twitch"
-import { getSyncGqlToken } from "../services/sync-account"
-import { parseTwitchDate } from "./timezone"
-import { normalize } from "./utils"
-import { safeDecrypt } from "./encryption"
-import { type AlertJobData } from "./queue"
+import { prisma } from "@/lib/prisma"
+import { getActiveDropCampaigns, getDropCampaignDetails } from "@/services/twitch"
+import { getSyncGqlToken } from "@/services/sync-account"
+import { parseTwitchDate } from "@/lib/timezone"
+import { normalize } from "@/lib/utils"
+import { safeDecrypt } from "@/lib/encryption"
+import { sendDropAlert } from "@/services/email"
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
-})
+type DropItemData = {
+  name: string
+  rewardName: string | null
+  rewardImageUrl: string | null
+  requiredMinutesWatched: number | null
+}
+
+type AlertJobData = {
+  userId: string
+  email: string
+  gameName: string
+  gameBoxArtUrl: string | null
+  gameSteamAppId: number | null
+  dropName: string
+  startAt: string
+  endAt: string
+  twitchUrl: string
+  dropItems: DropItemData[]
+}
 
 export async function runPeriodicSync() {
   console.log("[sync] Début de la synchronisation planifiée")
@@ -127,16 +142,16 @@ export async function runPeriodicSync() {
       await prisma.$transaction(
         items.map((item, i) =>
           prisma.dropItem.create({
-          data: {
-            twitchDropId: drop.id,
-            name: item.name,
-            rewardName: item.benefitEdges?.[0]?.benefit?.name ?? item.reward?.name ?? null,
-            rewardImageUrl: item.benefitEdges?.[0]?.benefit?.imageAssetURL ?? item.benefitEdges?.[0]?.benefit?.imageURL ?? item.reward?.imageURL ?? null,
-            requiredMinutesWatched: item.requiredMinutesWatched ?? null,
-            sortOrder: i,
-          },
-        })
-      )
+            data: {
+              twitchDropId: drop.id,
+              name: item.name,
+              rewardName: item.benefitEdges?.[0]?.benefit?.name ?? item.reward?.name ?? null,
+              rewardImageUrl: item.benefitEdges?.[0]?.benefit?.imageAssetURL ?? item.benefitEdges?.[0]?.benefit?.imageURL ?? item.reward?.imageURL ?? null,
+              requiredMinutesWatched: item.requiredMinutesWatched ?? null,
+              sortOrder: i,
+            },
+          })
+        )
       )
     } else {
       await prisma.dropItem.create({
@@ -190,30 +205,12 @@ export async function runPeriodicSync() {
 
       if (!matchedGame) continue
 
-      const existing = await prisma.alert.findFirst({
-        where: {
-          userId: user.id,
-          gameId: matchedGame.game.id,
-          dropId: drop.id,
-        },
-      })
-
-      if (existing) continue
-
-      await prisma.alert.create({
-        data: {
-          userId: user.id,
-          gameId: matchedGame.game.id,
-          dropId: drop.id,
-        },
-      })
-
       const dropItems = await prisma.dropItem.findMany({
         where: { twitchDropId: drop.id },
         orderBy: { sortOrder: "asc" },
       })
 
-      const alertData = {
+      const alertData: AlertJobData = {
         userId: user.id,
         email: safeDecrypt(user.email!),
         gameName: drop.gameName,
@@ -232,10 +229,39 @@ export async function runPeriodicSync() {
       }
 
       try {
-        await sendDropAlertDirect(alertData)
+        await sendDropAlert({
+          to: alertData.email,
+          gameName: alertData.gameName,
+          gameBoxArtUrl: alertData.gameBoxArtUrl,
+          gameSteamAppId: alertData.gameSteamAppId,
+          dropName: alertData.dropName,
+          startAt: new Date(alertData.startAt),
+          endAt: new Date(alertData.endAt),
+          twitchUrl: alertData.twitchUrl,
+          dropItems: alertData.dropItems,
+        })
       } catch (e) {
         console.error("[sync] Échec envoi email:", e)
+        continue
       }
+
+      const existing = await prisma.alert.findFirst({
+        where: {
+          userId: user.id,
+          gameId: matchedGame.game.id,
+          dropId: drop.id,
+        },
+      })
+
+      if (existing) continue
+
+      await prisma.alert.create({
+        data: {
+          userId: user.id,
+          gameId: matchedGame.game.id,
+          dropId: drop.id,
+        },
+      })
 
       matchCount++
     }
@@ -254,20 +280,3 @@ export async function runPeriodicSync() {
   console.log(`[sync] Synchronisation terminée: ${totalAlerts} alertes générées`)
   return { ok: true, count: totalAlerts }
 }
-
-async function sendDropAlertDirect(data: AlertJobData) {
-  const { sendDropAlert } = await import("../services/email")
-  await sendDropAlert({
-    to: data.email,
-    gameName: data.gameName,
-    gameBoxArtUrl: data.gameBoxArtUrl,
-    gameSteamAppId: data.gameSteamAppId,
-    dropName: data.dropName,
-    startAt: new Date(data.startAt),
-    endAt: new Date(data.endAt),
-    twitchUrl: data.twitchUrl,
-    dropItems: data.dropItems,
-  })
-}
-
-
