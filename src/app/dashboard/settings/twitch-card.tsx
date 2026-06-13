@@ -147,7 +147,7 @@ export function TwitchConnectionCard({ connection }: Props) {
                 <p className="text-sm text-muted-foreground mb-2">
                   {connection!.activeDropsCount} campagne
                   {connection!.activeDropsCount > 1 ? "s" : ""} de drops active
-                  {connection!.activeDropsCount > 1 ? "s" : ""}s en base
+                  {connection!.activeDropsCount > 1 ? "s" : ""} en base
                 </p>
               )}
 
