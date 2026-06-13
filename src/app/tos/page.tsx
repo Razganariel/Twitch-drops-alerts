@@ -192,13 +192,33 @@ export default function TosPage() {
             </Link>
             .
           </p>
-          <Link
-            href="https://github.com/dvergar/Twitch-drops-alerts"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ExternalLink className="h-4 w-4" />
-            GitHub
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/tos"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              CGU
+            </Link>
+            <Link
+              href="/faq"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              FAQ
+            </Link>
+            <Link
+              href="/privacy"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Confidentialité
+            </Link>
+            <Link
+              href="https://github.com/dvergar/Twitch-drops-alerts"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              GitHub
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
