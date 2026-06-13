@@ -43,12 +43,11 @@ export async function runPeriodicSync() {
     (u) =>
       u.email &&
       u.emailHash &&
-      u.steamConnection &&
-      u.twitchConnection?.gqlAccessToken
+      u.steamConnection
   )
 
   if (connectedUsers.length === 0) {
-    console.log("[sync] Aucun utilisateur avec Twitch + Steam connectés")
+    console.log("[sync] Aucun utilisateur avec Steam connecté")
     return { ok: true, count: 0 }
   }
 
