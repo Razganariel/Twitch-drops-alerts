@@ -20,6 +20,15 @@ export async function proxy(request: NextRequest) {
   }
 
   if (getMaintenanceValue() === "true") {
+    try {
+      const baseUrl = new URL(request.url).origin
+      const sessionRes = await fetch(`${baseUrl}/api/settings/check-admin`, {
+        headers: { cookie: request.headers.get("cookie") ?? "" },
+      })
+      const { isAdmin } = await sessionRes.json()
+      if (isAdmin) return NextResponse.next()
+    } catch {}
+
     return NextResponse.redirect(new URL("/maintenance", request.url))
   }
 
