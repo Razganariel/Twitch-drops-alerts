@@ -123,6 +123,13 @@ export function DashboardSidebar({ unreadCount, isAdmin }: Props) {
 
         <div className="shrink-0 space-y-2 pt-4 border-t">
           <ModeToggle />
+          <Link
+            href="/dashboard/faq"
+            className="block rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+            onClick={() => setOpen(false)}
+          >
+            FAQ
+          </Link>
           <LogoutButton />
         </div>
       </aside>
