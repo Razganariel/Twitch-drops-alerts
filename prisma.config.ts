@@ -1,9 +1,9 @@
 import { config } from "dotenv";
 import { defineConfig } from "prisma/config";
 
-// Charger .env, puis .env.local (qui surcharge en dev)
+// Charger .env, puis .env.local (qui surcharge en dev via override: true)
 config({ path: ".env" });
-config({ path: ".env.local" });
+config({ path: ".env.local", override: true });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
