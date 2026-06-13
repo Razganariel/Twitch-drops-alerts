@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server"
 
 const allowedInMaintenance = ["/login", "/maintenance"]
 
+const localBaseUrl = `http://localhost:${process.env.PORT || 3330}`
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -19,21 +21,18 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    const baseUrl = new URL(request.url).origin
-    const res = await fetch(`${baseUrl}/api/settings/maintenance`, {
-      headers: { cookie: request.headers.get("cookie") ?? "" },
-    })
+    const res = await fetch(`${localBaseUrl}/api/settings/maintenance`)
     const { maintenance } = await res.json()
 
     if (maintenance === "true") {
       try {
-        const sessionRes = await fetch(`${baseUrl}/api/auth/session`, {
+        const sessionRes = await fetch(`${localBaseUrl}/api/auth/session`, {
           headers: { cookie: request.headers.get("cookie") ?? "" },
         })
         const session = await sessionRes.json()
 
         if (session?.user?.id) {
-          const adminRes = await fetch(`${baseUrl}/api/settings/check-admin`, {
+          const adminRes = await fetch(`${localBaseUrl}/api/settings/check-admin`, {
             headers: { cookie: request.headers.get("cookie") ?? "" },
           })
           const adminData = await adminRes.json()
