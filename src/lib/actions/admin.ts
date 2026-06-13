@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { encrypt, safeDecrypt } from "@/lib/encryption"
 import { testTwitchClientId, testTwitchCredentials, testResend, testSmtp } from "@/services/health"
+import { setMaintenanceValue } from "@/lib/maintenance"
 
 async function requireAdmin() {
   const session = await auth()
@@ -115,6 +116,8 @@ export async function toggleMaintenance() {
       data: { key: "maintenance", value: newValue },
     })
   }
+
+  setMaintenanceValue(newValue)
 
   return { active: newValue === "true" }
 }
