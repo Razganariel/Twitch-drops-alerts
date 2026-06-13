@@ -29,8 +29,6 @@ type SearchResult = {
 export function LibraryClient({ games }: Props) {
   const [search, setSearch] = useState("")
   const [filterDeleted, setFilterDeleted] = useState(false)
-  const [filterDemos, setFilterDemos] = useState(false)
-  const [filterPlaytests, setFilterPlaytests] = useState(false)
   const [showSearchModal, setShowSearchModal] = useState(false)
 
   const allEnabled = games.filter((g) => !g.deletedAt).every((g) => g.isAlertEnabled) && games.filter((g) => !g.deletedAt).length > 0
@@ -40,8 +38,6 @@ export function LibraryClient({ games }: Props) {
     if (!searchMatch) return false
 
     const conditions: boolean[] = []
-    if (filterDemos) conditions.push(g.name.toLowerCase().includes("demo"))
-    if (filterPlaytests) conditions.push(g.name.toLowerCase().includes("playtest"))
     if (filterDeleted) conditions.push(!!g.deletedAt)
 
     if (conditions.length === 0) return !g.deletedAt
@@ -70,20 +66,6 @@ export function LibraryClient({ games }: Props) {
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => setShowSearchModal(true)}>
               <Plus className="h-4 w-4 mr-1" /> Ajouter un jeu
-            </Button>
-            <Button
-              variant={filterDemos ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setFilterDemos(!filterDemos)}
-            >
-              Démo
-            </Button>
-            <Button
-              variant={filterPlaytests ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setFilterPlaytests(!filterPlaytests)}
-            >
-              Playtest
             </Button>
             <Button
               variant={filterDeleted ? "secondary" : "outline"}

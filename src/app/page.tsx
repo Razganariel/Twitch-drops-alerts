@@ -216,6 +216,12 @@ export default async function Home() {
               CGU
             </Link>
             <Link
+              href="/faq"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              FAQ
+            </Link>
+            <Link
               href="/privacy"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
