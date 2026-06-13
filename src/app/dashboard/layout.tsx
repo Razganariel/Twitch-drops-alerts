@@ -11,13 +11,19 @@ export default async function DashboardLayout({
   const session = await auth()
   if (!session?.user) redirect("/login")
 
-  const unreadCount = await prisma.alert.count({
-    where: { userId: session.user.id, status: "SENT" },
-  })
+  const [unreadCount, user] = await Promise.all([
+    prisma.alert.count({
+      where: { userId: session.user.id, status: "SENT" },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { isAdmin: true },
+    }),
+  ])
 
   return (
     <div className="flex h-svh overflow-hidden">
-      <DashboardSidebar unreadCount={unreadCount} />
+      <DashboardSidebar unreadCount={unreadCount} isAdmin={user?.isAdmin ?? false} />
       <main className="flex-1 flex flex-col overflow-y-auto p-4 md:p-8 pt-16 md:pt-8">
         {children}
       </main>
