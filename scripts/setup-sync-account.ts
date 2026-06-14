@@ -13,7 +13,8 @@ async function main() {
   console.log("─".repeat(50))
   console.log("1️⃣  Démarrage du device flow…\n")
 
-  const flow = await startDeviceFlow()
+  const botClientId = process.env.TWITCH_BOT_CLIENT_ID
+  const flow = await startDeviceFlow(botClientId)
 
   console.log(`   Rends-toi sur : ${flow.verification_uri}`)
   console.log(`   Code          : ${flow.user_code}`)
@@ -26,7 +27,7 @@ async function main() {
   while (true) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs))
 
-    const tokens = await pollDeviceFlow(flow.device_code)
+    const tokens = await pollDeviceFlow(flow.device_code, botClientId)
 
     if (!tokens) {
       process.stdout.write(".")
