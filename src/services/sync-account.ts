@@ -22,7 +22,7 @@ export async function getSyncGqlToken(): Promise<string | null> {
     const refreshToken = decrypt(account.refreshToken)
 
     try {
-      const tokens = await refreshGqlToken(refreshToken, process.env.TWITCH_CLIENT_SECRET)
+      const tokens = await refreshGqlToken(refreshToken)
 
       accessToken = tokens.access_token
 
