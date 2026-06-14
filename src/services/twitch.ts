@@ -1,9 +1,17 @@
+import crypto from "node:crypto"
+
 const TWITCH_API_BASE = "https://api.twitch.tv/helix"
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2"
 const TWITCH_GQL_BASE = "https://gql.twitch.tv/gql"
 const TWITCH_ANDROID_CLIENT_ID = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
 
-import crypto from "node:crypto"
+function getBotClientId() {
+  return process.env.TWITCH_BOT_CLIENT_ID || TWITCH_ANDROID_CLIENT_ID
+}
+
+function getBotClientSecret() {
+  return process.env.TWITCH_BOT_CLIENT_SECRET
+}
 
 const gqlSessionId = crypto.randomUUID()
 const gqlDeviceId = crypto.randomUUID()
@@ -24,6 +32,10 @@ async function fetchWithToken(url: string, accessToken: string, clientId: string
   return response.json()
 }
 
+function getGqlClientId() {
+  return process.env.TWITCH_BOT_CLIENT_ID || TWITCH_ANDROID_CLIENT_ID
+}
+
 async function fetchGQL(
   accessToken: string,
   operationName: string,
@@ -34,7 +46,7 @@ async function fetchGQL(
     method: "POST",
     headers: {
       Authorization: `OAuth ${accessToken}`,
-      "Client-Id": TWITCH_ANDROID_CLIENT_ID,
+      "Client-Id": getGqlClientId(),
       "Content-Type": "application/json",
       "Client-Session-Id": gqlSessionId,
       "X-Device-Id": gqlDeviceId,
@@ -168,12 +180,13 @@ export type DeviceFlowResponse = {
   interval: number
 }
 
-export async function startDeviceFlow(): Promise<DeviceFlowResponse> {
+export async function startDeviceFlow(clientId?: string): Promise<DeviceFlowResponse> {
+  const id = clientId || TWITCH_ANDROID_CLIENT_ID
   const response = await fetch(`${TWITCH_AUTH_BASE}/device`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: TWITCH_ANDROID_CLIENT_ID,
+      client_id: id,
       scopes: "user:read:follows",
     }),
   })
@@ -187,13 +200,15 @@ export async function startDeviceFlow(): Promise<DeviceFlowResponse> {
 }
 
 export async function pollDeviceFlow(
-  deviceCode: string
+  deviceCode: string,
+  clientId?: string
 ): Promise<{ access_token: string; refresh_token: string; expires_in: number } | null> {
+  const id = clientId || TWITCH_ANDROID_CLIENT_ID
   const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: TWITCH_ANDROID_CLIENT_ID,
+      client_id: id,
       device_code: deviceCode,
       grant_type: "urn:ietf:params:oauth:grant-type:device_code",
     }),
@@ -215,13 +230,18 @@ export async function pollDeviceFlow(
   return response.json()
 }
 
-export async function refreshGqlToken(refreshToken: string, clientSecret?: string) {
+export async function refreshGqlToken(refreshToken: string) {
   const params: Record<string, string> = {
     client_id: TWITCH_ANDROID_CLIENT_ID,
     grant_type: "refresh_token",
     refresh_token: refreshToken,
   }
-  if (clientSecret) params.client_secret = clientSecret
+
+  const botSecret = process.env.TWITCH_BOT_CLIENT_SECRET
+  if (botSecret) {
+    params.client_id = process.env.TWITCH_BOT_CLIENT_ID || TWITCH_ANDROID_CLIENT_ID
+    params.client_secret = botSecret
+  }
 
   const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
     method: "POST",
