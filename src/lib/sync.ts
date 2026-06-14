@@ -1,3 +1,4 @@
+import "./logger"
 import { prisma } from "@/lib/prisma"
 import { getActiveDropCampaigns, getDropCampaignDetails } from "@/services/twitch"
 import { getSyncGqlToken } from "@/services/sync-account"
