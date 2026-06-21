@@ -13,6 +13,6 @@ const dashboardFilterValues = ["ALL", "MATCH"] as const
 const dashboardViewValues = ["GRID", "LIST"] as const
 
 export const dashboardPreferencesSchema = z.object({
-  dashboardFilter: z.enum(dashboardFilterValues, "Filtre invalide"),
-  dashboardView: z.enum(dashboardViewValues, "Vue invalide"),
+  dashboardFilter: z.enum(dashboardFilterValues, { message: "Filtre invalide" }),
+  dashboardView: z.enum(dashboardViewValues, { message: "Vue invalide" }),
 })
