@@ -9,6 +9,8 @@ import { TwitchConnectionCard } from "./twitch-card"
 import { SteamConnectionCard } from "./steam-card"
 import { DownloadCard } from "./download-card"
 import { DeleteAccountCard } from "./delete-card"
+import { TimezoneSelector } from "./timezone-selector"
+import { formatDate } from "@/lib/timezone"
 
 const twitchMessages: Record<string, string> = {
   success: "Connexion Twitch réussie",
@@ -36,7 +38,7 @@ export default async function SettingsPage(props: {
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { checkInterval: true, lastMatchAt: true, dashboardFilter: true, dashboardView: true },
+      select: { checkInterval: true, lastMatchAt: true, timezone: true, dashboardFilter: true, dashboardView: true },
     }),
     prisma.twitchConnection.findUnique({
       where: { userId: session.user.id },
@@ -57,6 +59,8 @@ export default async function SettingsPage(props: {
 
   if (!user) redirect("/login")
 
+  const tz = user.timezone ?? "UTC"
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
@@ -74,7 +78,7 @@ export default async function SettingsPage(props: {
             Fréquence à laquelle le système vérifie les nouveaux drops et les
             compare à ta bibliothèque Steam. Dernière vérification :{" "}
             {user.lastMatchAt
-              ? new Date(user.lastMatchAt).toLocaleString("fr-FR")
+              ? formatDate(user.lastMatchAt, tz)
               : "jamais"}
           </CardDescription>
         </CardHeader>
@@ -98,6 +102,8 @@ export default async function SettingsPage(props: {
         </CardContent>
       </Card>
 
+      <TimezoneSelector currentTimezone={user.timezone ?? null} />
+
       <TwitchConnectionCard
         connection={
           twitchConnection
@@ -112,6 +118,7 @@ export default async function SettingsPage(props: {
       />
 
       <SteamConnectionCard
+        timezone={tz}
         connection={
           steamConnection
             ? {
