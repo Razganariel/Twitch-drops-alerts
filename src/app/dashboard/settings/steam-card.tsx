@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useActionState, useState, useEffect } from "react"
+import { Loader2, Pencil } from "lucide-react"
 import type { ConnectSteamResult } from "@/lib/actions/steam"
 import { connectSteam } from "@/lib/actions/steam"
 import { Button } from "@/components/ui/button"
@@ -41,6 +42,13 @@ export function SteamConnectionCard({
   )
   const cooldown = useCooldown("sync:steam")
 
+  const [editingApiKey, setEditingApiKey] = useState(false)
+  const [apiKeyDraft, setApiKeyDraft] = useState("")
+
+  useEffect(() => {
+    if (result?.ok) setEditingApiKey(false)
+  }, [result])
+
   const isConnected = !!(connection || result?.steamId)
   const showConnected = isConnected && !result?.needsReauth
   const displaySteamId = result?.steamId || connection?.steamId || ""
@@ -72,9 +80,15 @@ export function SteamConnectionCard({
                   <span className="text-muted-foreground">Steam ID</span>
                   <span className="font-mono">{displaySteamId}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Clé API</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">Clé valide</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-600 dark:text-emerald-400">Clé valide</span>
+                    <Button type="button" size="sm" variant="outline" className="gap-2" onClick={() => { setEditingApiKey(true); setApiKeyDraft("") }}>
+                      <Pencil className="h-4 w-4" />
+                      Modifier
+                    </Button>
+                  </div>
                 </div>
                 {connection?.lastSyncedAt && (
                   <>
@@ -89,6 +103,27 @@ export function SteamConnectionCard({
                   </>
                 )}
               </div>
+              {editingApiKey && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <Label htmlFor="edit-api-key" className="text-sm">Nouvelle clé API</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="edit-api-key"
+                      name="apiKey"
+                      value={apiKeyDraft}
+                      onChange={(e) => setApiKeyDraft(e.target.value)}
+                      type="password"
+                      placeholder="Clé API Steam (32 caractères)"
+                      className="h-9 text-sm flex-1"
+                      autoFocus
+                    />
+                    <Button type="submit" size="sm" disabled={isPending || apiKeyDraft.length !== 32}>
+                      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setEditingApiKey(false)}>Annuler</Button>
+                  </div>
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isPending || cooldown.isOnCooldown}>
                 {isPending
                   ? "Synchronisation..."
