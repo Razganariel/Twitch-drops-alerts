@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import type { ConnectSteamResult } from "@/lib/actions/steam"
 import { connectSteam } from "@/lib/actions/steam"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useCooldown } from "@/components/shared/use-cooldown"
+import { steamSchema } from "@/lib/schemas/steam"
 
 type SteamConnectionData = {
   steamId: string
@@ -22,8 +23,18 @@ export function SteamConnectionCard({
   connection: SteamConnectionData
 }) {
   const [result, formAction, isPending] = useActionState(
-    async (_prev: ConnectSteamResult | null, formData: FormData) =>
-      connectSteam(_prev, formData),
+    async (_prev: ConnectSteamResult | null, formData: FormData) => {
+      const parsed = steamSchema.safeParse({
+        steamId: formData.get("steamId"),
+        username: formData.get("username"),
+        apiKey: formData.get("apiKey"),
+      })
+      if (!parsed.success) {
+        const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0]
+        return { ok: false, message: firstError ?? "Données invalides" }
+      }
+      return connectSteam(_prev, formData)
+    },
     null,
   )
   const cooldown = useCooldown("sync:steam")

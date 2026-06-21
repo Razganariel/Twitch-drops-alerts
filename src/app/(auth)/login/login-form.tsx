@@ -9,19 +9,33 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { loginSchema } from "@/lib/schemas/auth"
 
 export function LoginForm({ twitchEnabled }: { twitchEnabled: boolean }) {
   const router = useRouter()
   const [error, setError] = useState<string | undefined>()
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]> | null>(null)
   const [isPending, setIsPending] = useState(false)
 
   async function handleSubmit(formData: FormData) {
     setIsPending(true)
     setError(undefined)
+    setFieldErrors(null)
+
+    const parsed = loginSchema.safeParse({
+      email: formData.get("email"),
+      password: formData.get("password"),
+    })
+
+    if (!parsed.success) {
+      setFieldErrors(parsed.error.flatten().fieldErrors)
+      setIsPending(false)
+      return
+    }
 
     const result = await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
+      email: parsed.data.email,
+      password: parsed.data.password,
       redirect: false,
     })
 
@@ -60,6 +74,12 @@ export function LoginForm({ twitchEnabled }: { twitchEnabled: boolean }) {
               <Label htmlFor="password">Mot de passe</Label>
               <Input id="password" name="password" type="password" required suppressHydrationWarning />
             </div>
+            {fieldErrors?.email && (
+              <p className="text-sm text-destructive">{fieldErrors.email[0]}</p>
+            )}
+            {fieldErrors?.password && (
+              <p className="text-sm text-destructive">{fieldErrors.password[0]}</p>
+            )}
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}

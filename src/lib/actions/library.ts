@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { encrypt } from "@/lib/encryption"
+import { z } from "zod"
 import { getGameDetails, getSteamLogoUrl } from "@/services/steam"
 
 export async function toggleGameAlert(formData: FormData) {
@@ -63,12 +64,15 @@ export async function toggleAllAlerts(formData: FormData) {
   revalidatePath("/dashboard/library")
 }
 
+const steamAppIdSchema = z.coerce.number().int().positive("ID de jeu invalide")
+
 export async function addGameToLibrary(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) return { error: "Non authentifié" }
 
-  const steamAppId = Number(formData.get("steamAppId"))
-  if (!steamAppId) return { error: "ID de jeu invalide" }
+  const parsed = steamAppIdSchema.safeParse(formData.get("steamAppId"))
+  if (!parsed.success) return { error: "ID de jeu invalide" }
+  const steamAppId = parsed.data
 
   const details = await getGameDetails(steamAppId)
   if (!details) return { error: "Jeu introuvable" }
