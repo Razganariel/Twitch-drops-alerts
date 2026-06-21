@@ -6,24 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 
-const COMMON_ZONES = [
-  "Europe/Paris",
-  "Europe/London",
-  "Europe/Berlin",
-  "Europe/Madrid",
-  "Europe/Rome",
-  "Europe/Amsterdam",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "Asia/Tokyo",
-  "Asia/Shanghai",
-  "Asia/Kolkata",
-  "Australia/Sydney",
-  "Pacific/Auckland",
-  "UTC",
-]
+const ALL_ZONES = Intl.supportedValuesOf("timeZone").sort()
 
 export function TimezoneSelector({ currentTimezone }: { currentTimezone: string | null }) {
   const [selected, setSelected] = useState(currentTimezone ?? "UTC")
@@ -49,27 +32,20 @@ export function TimezoneSelector({ currentTimezone }: { currentTimezone: string 
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {COMMON_ZONES.map((tz) => (
-            <Label
-              key={tz}
-              className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                selected === tz
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "hover:bg-muted"
-              }`}
-            >
-              <input
-                type="radio"
-                name="timezone"
-                value={tz}
-                checked={selected === tz}
-                onChange={(e) => setSelected(e.target.value)}
-                className="sr-only"
-              />
-              {tz.replace("_", " ")}
-            </Label>
-          ))}
+        <div className="space-y-1.5">
+          <Label htmlFor="timezone-select">Fuseau</Label>
+          <select
+            id="timezone-select"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {ALL_ZONES.map((tz) => (
+              <option key={tz} value={tz}>
+                {tz.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={handleSave} disabled={saving || selected === currentTimezone}>
