@@ -210,41 +210,6 @@ export async function runPeriodicSync() {
         orderBy: { sortOrder: "asc" },
       })
 
-      const alertData: AlertJobData = {
-        userId: user.id,
-        email: safeDecrypt(user.email!),
-        gameName: drop.gameName,
-        gameBoxArtUrl: drop.gameBoxArtUrl,
-        gameSteamAppId: matchedGame.game.steamAppId,
-        dropName: drop.campaignName,
-        startAt: drop.startAt.toISOString(),
-        endAt: drop.endAt.toISOString(),
-        twitchUrl: "https://www.twitch.tv/drops/inventory",
-        dropItems: dropItems.map((di) => ({
-          name: di.name,
-          rewardName: di.rewardName,
-          rewardImageUrl: di.rewardImageUrl,
-          requiredMinutesWatched: di.requiredMinutesWatched,
-        })),
-      }
-
-      try {
-        await sendDropAlert({
-          to: alertData.email,
-          gameName: alertData.gameName,
-          gameBoxArtUrl: alertData.gameBoxArtUrl,
-          gameSteamAppId: alertData.gameSteamAppId,
-          dropName: alertData.dropName,
-          startAt: new Date(alertData.startAt),
-          endAt: new Date(alertData.endAt),
-          twitchUrl: alertData.twitchUrl,
-          dropItems: alertData.dropItems,
-        })
-      } catch (e) {
-        console.error("[sync] Échec envoi email:", e)
-        continue
-      }
-
       const existing = await prisma.alert.findFirst({
         where: {
           userId: user.id,
@@ -262,6 +227,28 @@ export async function runPeriodicSync() {
           dropId: drop.id,
         },
       })
+
+      try {
+        await sendDropAlert({
+          to: safeDecrypt(user.email!),
+          gameName: drop.gameName,
+          gameBoxArtUrl: drop.gameBoxArtUrl,
+          gameSteamAppId: matchedGame.game.steamAppId,
+          dropName: drop.campaignName,
+          startAt: drop.startAt,
+          endAt: drop.endAt,
+          twitchUrl: "https://www.twitch.tv/drops/inventory",
+          dropItems: dropItems.map((di) => ({
+            name: di.name,
+            rewardName: di.rewardName,
+            rewardImageUrl: di.rewardImageUrl,
+            requiredMinutesWatched: di.requiredMinutesWatched,
+          })),
+        })
+      } catch (e) {
+        console.error("[sync] Échec envoi email:", e)
+        continue
+      }
 
       matchCount++
     }
