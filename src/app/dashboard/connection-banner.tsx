@@ -10,6 +10,7 @@ type Props = {
   activeCampaigns: number
   syncedGames: number
   steamLastSyncedAt: string | null
+  lastMatchAt: string | null
 }
 
 function SyncBadge({ label, children }: { label: string; children: React.ReactNode }) {
@@ -21,23 +22,13 @@ function SyncBadge({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
-export function ConnectionBanner({
-  twitchConnected,
-  gqlConnected,
-  steamConnected,
-  activeCampaigns,
-  syncedGames,
-  steamLastSyncedAt,
-}: Props) {
-  const [steamSyncLabel, setSteamSyncLabel] = useState("")
+function Elapsed({ at }: { at: string | null }) {
+  const [label, setLabel] = useState("")
   useEffect(() => {
     const update = () => {
-      if (!steamLastSyncedAt) {
-        setSteamSyncLabel("jamais")
-        return
-      }
-      const ago = Math.floor((Date.now() - new Date(steamLastSyncedAt).getTime()) / 1000)
-      setSteamSyncLabel(
+      if (!at) { setLabel("jamais"); return }
+      const ago = Math.floor((Date.now() - new Date(at).getTime()) / 1000)
+      setLabel(
         ago > 86400
           ? `${Math.floor(ago / 86400)}j`
           : ago > 3600
@@ -48,8 +39,19 @@ export function ConnectionBanner({
     update()
     const id = setInterval(update, 60000)
     return () => clearInterval(id)
-  }, [steamLastSyncedAt])
+  }, [at])
+  return <span className="font-mono text-xs text-muted-foreground">{label}</span>
+}
 
+export function ConnectionBanner({
+  twitchConnected,
+  gqlConnected,
+  steamConnected,
+  activeCampaigns,
+  syncedGames,
+  steamLastSyncedAt,
+  lastMatchAt,
+}: Props) {
   return (
     <div className="flex flex-wrap gap-3">
       <SyncBadge label="Twitch">
@@ -68,6 +70,10 @@ export function ConnectionBanner({
         )}
       </SyncBadge>
 
+      <SyncBadge label="Match drops">
+        <Elapsed at={lastMatchAt} />
+      </SyncBadge>
+
       <SyncBadge label="Campagnes">
         <span className="font-semibold">{activeCampaigns}</span>
       </SyncBadge>
@@ -81,7 +87,7 @@ export function ConnectionBanner({
       </SyncBadge>
 
       <SyncBadge label="Sync Steam">
-        <span className="font-mono text-xs text-muted-foreground">{steamSyncLabel}</span>
+        <Elapsed at={steamLastSyncedAt} />
       </SyncBadge>
 
       <SyncBadge label="Jeux">
