@@ -6,7 +6,7 @@ import { maskValue, safeDecrypt } from "@/lib/encryption"
 import { createOtp, sendOtpEmail, verifyOtp } from "@/lib/otp"
 import { z } from "zod"
 
-const purposeSchema = z.enum(["download", "delete"], "Finalité invalide")
+const purposeSchema = z.enum(["download", "delete"], { message: "Finalité invalide" })
 const otpCodeSchema = z.string().length(6, "Le code fait 6 chiffres").regex(/^\d{6}$/, "Code invalide")
 
 export async function requestOtp(purpose: "download" | "delete") {
