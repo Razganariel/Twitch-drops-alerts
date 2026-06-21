@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { z } from "zod"
+import { stripHtml } from "@/lib/schemas/helpers"
 import { checkIntervalSchema, dashboardPreferencesSchema } from "@/lib/schemas/settings"
 
 export async function updateCheckInterval(_prevState: unknown, formData: FormData) {
@@ -22,6 +24,24 @@ export async function updateCheckInterval(_prevState: unknown, formData: FormDat
 
   revalidatePath("/dashboard/settings")
   return { ok: true, message: "Intervalle mis à jour" }
+}
+
+const timezoneSchema = z.string().min(1).max(50).transform(stripHtml)
+
+export async function updateTimezone(formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
+
+  const parsed = timezoneSchema.safeParse(formData.get("timezone"))
+  if (!parsed.success) return { ok: false, message: "Fuseau invalide" }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { timezone: parsed.data },
+  })
+
+  revalidatePath("/dashboard/settings")
+  return { ok: true, message: "Fuseau horaire mis à jour" }
 }
 
 export async function updateDashboardPreferences(

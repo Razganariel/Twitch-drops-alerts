@@ -18,8 +18,10 @@ type SteamConnectionData = {
 } | null
 
 export function SteamConnectionCard({
+  timezone,
   connection,
 }: {
+  timezone: string
   connection: SteamConnectionData
 }) {
   const [result, formAction, isPending] = useActionState(
@@ -77,7 +79,7 @@ export function SteamConnectionCard({
                 {connection?.lastSyncedAt && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Dernière synchro</span>
-                    <span>{new Date(connection.lastSyncedAt).toLocaleDateString()}</span>
+                    <span>{new Date(connection.lastSyncedAt).toLocaleString("fr-FR", { timeZone: timezone, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                 )}
               </div>

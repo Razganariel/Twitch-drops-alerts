@@ -34,9 +34,10 @@ type Campaign = {
 
 type Props = {
   campaign: Campaign
+  timezone: string
 }
 
-export function CampaignRow({ campaign }: Props) {
+export function CampaignRow({ campaign, timezone }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [localAlert, setLocalAlert] = useState(campaign.alert)
 
@@ -77,9 +78,9 @@ export function CampaignRow({ campaign }: Props) {
 
         <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline whitespace-nowrap">
           <Clock className="h-3 w-3 inline mr-1" />
-          {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+          {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
           {" → "}
-          {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+          {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
         </span>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -123,9 +124,9 @@ export function CampaignRow({ campaign }: Props) {
         <div className="border-t px-3 py-2 space-y-1.5">
           <div className="flex items-center gap-2 text-sm pl-11 text-muted-foreground sm:hidden">
             <Clock className="h-3 w-3 shrink-0" />
-            {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+            {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
             {" → "}
-            {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+            {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
           </div>
           {campaign.dropItems.map((item) => (
             <div key={item.id} className="flex items-center gap-2 text-sm pl-11">

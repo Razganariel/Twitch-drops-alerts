@@ -35,9 +35,10 @@ type Campaign = {
 
 type Props = {
   campaign: Campaign
+  timezone: string
 }
 
-export function CampaignCard({ campaign }: Props) {
+export function CampaignCard({ campaign, timezone }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [localAlert, setLocalAlert] = useState(campaign.alert)
 
@@ -74,7 +75,7 @@ export function CampaignCard({ campaign }: Props) {
                 {campaign.dropItems.length} drop{campaign.dropItems.length > 1 ? "s" : ""}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                {new Date(campaign.startAt).toLocaleDateString("fr-FR")}
+                {new Date(campaign.startAt).toLocaleDateString("fr-FR", { timeZone: timezone })}
               </span>
             </div>
           </div>
@@ -111,11 +112,11 @@ export function CampaignCard({ campaign }: Props) {
           <Clock className="h-3 w-3" />
           <span>
             {new Date(campaign.startAt).toLocaleDateString("fr-FR", {
-              day: "numeric", month: "short",
+              day: "numeric", month: "short", timeZone: timezone,
             })}{" "}
             →{" "}
             {new Date(campaign.endAt).toLocaleDateString("fr-FR", {
-              day: "numeric", month: "short", year: "numeric",
+              day: "numeric", month: "short", year: "numeric", timeZone: timezone,
             })}
           </span>
         </div>
