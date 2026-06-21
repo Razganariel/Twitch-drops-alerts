@@ -23,9 +23,9 @@ export async function connectSteam(
   if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
 
   const parsed = steamSchema.safeParse({
-    steamId: formData.get("steamId"),
-    username: formData.get("username"),
-    apiKey: formData.get("apiKey"),
+    steamId: formData.get("steamId") ?? "",
+    username: formData.get("username") ?? "",
+    apiKey: formData.get("apiKey") ?? "",
   })
 
   if (!parsed.success) {

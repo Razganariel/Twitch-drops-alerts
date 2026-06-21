@@ -27,9 +27,9 @@ export function SteamConnectionCard({
   const [result, formAction, isPending] = useActionState(
     async (_prev: ConnectSteamResult | null, formData: FormData) => {
       const parsed = steamSchema.safeParse({
-        steamId: formData.get("steamId"),
-        username: formData.get("username"),
-        apiKey: formData.get("apiKey"),
+        steamId: formData.get("steamId") ?? "",
+        username: formData.get("username") ?? "",
+        apiKey: formData.get("apiKey") ?? "",
       })
       if (!parsed.success) {
         const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0]
