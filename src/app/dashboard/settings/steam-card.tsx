@@ -77,10 +77,16 @@ export function SteamConnectionCard({
                   <span className="text-emerald-600 dark:text-emerald-400">Clé valide</span>
                 </div>
                 {connection?.lastSyncedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Dernière synchro</span>
-                    <span>{new Date(connection.lastSyncedAt).toLocaleString("fr-FR", { timeZone: timezone, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                  </div>
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Dernière synchro</span>
+                      <span>{new Date(connection.lastSyncedAt).toLocaleString("fr-FR", { timeZone: timezone, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Prochaine synchro auto</span>
+                      <NextSyncInfo lastSyncedAt={connection.lastSyncedAt} timezone={timezone} />
+                    </div>
+                  </>
                 )}
               </div>
               <Button type="submit" className="w-full" disabled={isPending || cooldown.isOnCooldown}>
@@ -146,4 +152,18 @@ export function SteamConnectionCard({
       </CardContent>
     </Card>
   )
+}
+
+function NextSyncInfo({ lastSyncedAt, timezone }: { lastSyncedAt: Date; timezone: string }) {
+  const DAY_MS = 86_400_000
+  const now = Date.now()
+  const nextSync = lastSyncedAt.getTime() + DAY_MS
+  const remaining = nextSync - now
+
+  if (remaining <= 0) return <span>Aujourd'hui</span>
+
+  const hours = Math.floor(remaining / 3_600_000)
+  const minutes = Math.floor((remaining % 3_600_000) / 60_000)
+
+  return <span>Dans {hours}h{minutes > 0 ? `${minutes}` : ""}</span>
 }

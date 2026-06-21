@@ -122,6 +122,7 @@ export default async function DashboardPage(props: {
         activeCampaigns={activeDrops.length}
         syncedGames={userGames.length}
         steamLastSyncedAt={steamConn?.lastSyncedAt?.toISOString() ?? null}
+        lastMatchAt={user.lastMatchAt?.toISOString() ?? null}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
