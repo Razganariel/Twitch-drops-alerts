@@ -3,6 +3,8 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { decrypt } from "@/lib/encryption"
+import { z } from "zod"
+import { stripHtml } from "@/lib/schemas/helpers"
 import { parseTwitchDate } from "@/lib/timezone"
 import {
   getFollowedStreams,
@@ -189,7 +191,8 @@ export async function syncActiveDrops(
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
 
-  const timezone = (formData.get("timezone") as string) || "UTC"
+  const timezoneParsed = z.string().min(1).max(50).transform(stripHtml).safeParse(formData.get("timezone"))
+  const timezone = timezoneParsed.success ? timezoneParsed.data : "UTC"
 
   await prisma.user.update({
     where: { id: session.user.id },
