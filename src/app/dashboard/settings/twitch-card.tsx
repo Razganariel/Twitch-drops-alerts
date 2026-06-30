@@ -151,7 +151,63 @@ export function TwitchConnectionCard({ connection }: Props) {
                 </p>
               )}
 
+              <div>
+              {needsGqlAuth && gql.step === "idle" ? (
+                <Button variant="secondary" className="w-full" onClick={handleGqlAuth}>
+                  Autoriser l&apos;accès aux drops
+                </Button>
+              ) : gql.step === "polling" ? (
+                <div className="space-y-3 rounded-md border p-4 text-center">
+                  <p className="text-sm font-medium">Autorise l&apos;accès aux drops Twitch</p>
+                  <ol className="text-left text-sm space-y-2">
+                    <li>
+                      1. Va sur{" "}
+                      <a
+                        href={gql.verificationUri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline text-primary"
+                      >
+                        {gql.verificationUri}
+                      </a>
+                    </li>
+                    <li>2. Connecte-toi si nécessaire</li>
+                    <li>
+                      3. Entre le code :{" "}
+                      <span className="font-mono font-bold text-lg tracking-widest">
+                        {gql.userCode}
+                      </span>
+                    </li>
+                  </ol>
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    En attente d&apos;autorisation...
+                  </p>
+                </div>
+              ) : (
+                <form ref={dropsFormRef} action={(formData) => dAction(formData)}>
+                  <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
+                  <Button variant="secondary" className="w-full" disabled={dPending || dropsCooldown.isOnCooldown || autoSync}>
+                    {autoSync
+                      ? "Synchronisation en cours..."
+                      : dPending
+                        ? "Récupération..."
+                        : dropsCooldown.isOnCooldown
+                          ? `Synchroniser les drops actifs (${Math.ceil(dropsCooldown.remaining / 60000)} min)`
+                          : "Synchroniser les drops actifs"}
+                  </Button>
+                </form>
+              )}
 
+              {gql.step === "error" && (
+                <p className="text-sm text-destructive">{gql.message}</p>
+              )}
+
+              {dResult && !("needsGqlAuth" in dResult) && (
+                <p className={`mt-1 text-sm ${dResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                  {dResult.message}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
