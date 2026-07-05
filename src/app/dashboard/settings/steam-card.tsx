@@ -19,9 +19,11 @@ type SteamConnectionData = {
 } | null
 
 export function SteamConnectionCard({
+  syncCooldownMs,
   timezone,
   connection,
 }: {
+  syncCooldownMs: number
   timezone: string
   connection: SteamConnectionData
 }) {
@@ -40,7 +42,7 @@ export function SteamConnectionCard({
     },
     null,
   )
-  const cooldown = useCooldown("sync:steam")
+  const cooldown = useCooldown("sync:steam", syncCooldownMs)
 
   const [editingApiKey, setEditingApiKey] = useState(false)
   const [apiKeyDraft, setApiKeyDraft] = useState("")

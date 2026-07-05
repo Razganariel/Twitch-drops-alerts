@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { useCooldown } from "@/components/shared/use-cooldown"
 
 type Props = {
+  syncCooldownMs: number
   connection: {
     twitchLogin: string | null
     hasAccessToken: boolean
@@ -17,13 +18,13 @@ type Props = {
   } | null
 }
 
-export function TwitchConnectionCard({ connection }: Props) {
+export function TwitchConnectionCard({ syncCooldownMs, connection }: Props) {
   const isConnected = !!connection?.hasAccessToken
 
   const [fResult, fAction, fPending] = useActionState(syncFollowedGames, null)
   const [dResult, dAction, dPending] = useActionState(syncActiveDrops, null)
-  const followedCooldown = useCooldown("sync:twitch:followed")
-  const dropsCooldown = useCooldown("sync:twitch:drops")
+  const followedCooldown = useCooldown("sync:twitch:followed", syncCooldownMs)
+  const dropsCooldown = useCooldown("sync:twitch:drops", syncCooldownMs)
 
   const [autoSync, setAutoSync] = useState(false)
 
