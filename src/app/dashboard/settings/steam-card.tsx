@@ -132,7 +132,9 @@ export function SteamConnectionCard({
                   : "Synchroniser ma bibliothèque"}
                 {cooldown.isOnCooldown && (
                   <span className="text-xs text-muted-foreground ml-2">
-                    ({Math.ceil(cooldown.remaining / 60000)} min)
+                    {cooldown.remaining >= 60000
+                      ? `${Math.ceil(cooldown.remaining / 60000)} min`
+                      : `${Math.ceil(cooldown.remaining / 1000)}s`}
                   </span>
                 )}
               </Button>
@@ -173,7 +175,9 @@ export function SteamConnectionCard({
                   : "Connecter mon compte Steam"}
                 {cooldown.isOnCooldown && (
                   <span className="text-xs text-muted-foreground ml-2">
-                    ({Math.ceil(cooldown.remaining / 60000)} min)
+                    ({cooldown.remaining >= 60000
+                      ? `${Math.ceil(cooldown.remaining / 60000)} min`
+                      : `${Math.ceil(cooldown.remaining / 1000)}s`})
                   </span>
                 )}
               </Button>

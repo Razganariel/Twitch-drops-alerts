@@ -132,7 +132,9 @@ export function TwitchConnectionCard({ syncCooldownMs, connection }: Props) {
                     : "Synchroniser mes jeux suivis"}
                   {followedCooldown.isOnCooldown && (
                     <span className="text-xs text-muted-foreground ml-2">
-                      ({Math.ceil(followedCooldown.remaining / 60000)} min)
+                      {followedCooldown.remaining >= 60000
+                        ? `${Math.ceil(followedCooldown.remaining / 60000)} min`
+                        : `${Math.ceil(followedCooldown.remaining / 1000)}s`}
                     </span>
                   )}
                 </Button>
@@ -193,7 +195,11 @@ export function TwitchConnectionCard({ syncCooldownMs, connection }: Props) {
                       : dPending
                         ? "Récupération..."
                         : dropsCooldown.isOnCooldown
-                          ? `Synchroniser les drops actifs (${Math.ceil(dropsCooldown.remaining / 60000)} min)`
+                          ? `Synchroniser les drops actifs (${
+                              dropsCooldown.remaining >= 60000
+                                ? `${Math.ceil(dropsCooldown.remaining / 60000)} min`
+                                : `${Math.ceil(dropsCooldown.remaining / 1000)}s`
+                            })`
                           : "Synchroniser les drops actifs"}
                   </Button>
                 </form>
