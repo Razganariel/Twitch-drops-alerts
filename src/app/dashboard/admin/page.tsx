@@ -31,6 +31,7 @@ const SETTING_META: Record<string, { label: string; secret: boolean }> = {
   SMTP_PORT: { label: "Port SMTP", secret: false },
   SMTP_USER: { label: "Utilisateur SMTP", secret: false },
   SMTP_PASS: { label: "Mot de passe SMTP", secret: true },
+  SYNC_COOLDOWN_SECONDS: { label: "Cooldown sync (secondes)", secret: false },
 }
 
 
@@ -301,7 +302,7 @@ export default function AdminPage() {
                   >
                     Modifier
                   </Button>
-                  {key !== "maintenance" && key !== "SMTP_PASS" && (
+                  {key !== "maintenance" && key !== "SMTP_PASS" && key !== "SYNC_COOLDOWN_SECONDS" && (
                     <Button
                       size="sm"
                       variant="secondary"
