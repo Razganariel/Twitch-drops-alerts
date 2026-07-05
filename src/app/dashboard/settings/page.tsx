@@ -61,7 +61,8 @@ export default async function SettingsPage(props: {
     }),
   ])
 
-  const syncCooldownMs = (Number(syncCooldownSetting?.value ? safeDecrypt(syncCooldownSetting.value) : 300)) * 1000
+  const defaultCooldownSec = Number(process.env.SYNC_COOLDOWN_DEFAULT_SECONDS ?? "300")
+  const syncCooldownMs = (Number(syncCooldownSetting?.value ? safeDecrypt(syncCooldownSetting.value) : defaultCooldownSec)) * 1000
 
   if (!user) redirect("/login")
 
