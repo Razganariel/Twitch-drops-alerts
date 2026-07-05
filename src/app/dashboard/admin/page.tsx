@@ -31,7 +31,6 @@ const SETTING_META: Record<string, { label: string; secret: boolean }> = {
   SMTP_PORT: { label: "Port SMTP", secret: false },
   SMTP_USER: { label: "Utilisateur SMTP", secret: false },
   SMTP_PASS: { label: "Mot de passe SMTP", secret: true },
-  SYNC_COOLDOWN_SECONDS: { label: "Cooldown sync (secondes)", secret: false },
 }
 
 
@@ -59,6 +58,8 @@ export default function AdminPage() {
   const [twitchClientId, setTwitchClientId] = useState("")
   const [twitchClientSecret, setTwitchClientSecret] = useState("")
   const [savingTwitch, setSavingTwitch] = useState(false)
+  const [syncCooldownValue, setSyncCooldownValue] = useState("")
+  const [savingCooldown, setSavingCooldown] = useState(false)
 
   const loadSettings = useCallback(async () => {
     try {
@@ -67,6 +68,8 @@ export default function AdminPage() {
       setEnvSettings(env)
       const maint = data.find((s) => s.key === "maintenance")
       setMaintenanceActive(maint?.value === "true")
+      const cooldown = data.find((s) => s.key === "SYNC_COOLDOWN_SECONDS")
+      setSyncCooldownValue(cooldown?.value ?? "300")
     } catch {
       router.push("/dashboard")
     } finally {
@@ -302,7 +305,7 @@ export default function AdminPage() {
                   >
                     Modifier
                   </Button>
-                  {key !== "maintenance" && key !== "SMTP_PASS" && key !== "SYNC_COOLDOWN_SECONDS" && (
+                  {key !== "maintenance" && key !== "SMTP_PASS" && (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -329,6 +332,40 @@ export default function AdminPage() {
             </div>
           </CardContent>
         )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cooldown de synchronisation</CardTitle>
+          <CardDescription>Délai minimum (en secondes) entre deux synchronisations manuelles des drops Twitch et de la bibliothèque Steam</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              min={0}
+              value={syncCooldownValue}
+              onChange={(e) => setSyncCooldownValue(e.target.value)}
+              className="h-9 text-sm w-32"
+              placeholder="300"
+            />
+            <span className="text-sm text-muted-foreground">secondes</span>
+            <Button
+              size="sm"
+              onClick={async () => {
+                setSavingCooldown(true)
+                try {
+                  await saveSetting("SYNC_COOLDOWN_SECONDS", String(Number(syncCooldownValue) || 300))
+                  await loadSettings()
+                } catch {}
+                setSavingCooldown(false)
+              }}
+              disabled={savingCooldown}
+            >
+              {savingCooldown ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
       <Card>
