@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { useCooldown } from "@/components/shared/use-cooldown"
 
 type Props = {
+  syncCooldownMs: number
   connection: {
     twitchLogin: string | null
     hasAccessToken: boolean
@@ -17,13 +18,13 @@ type Props = {
   } | null
 }
 
-export function TwitchConnectionCard({ connection }: Props) {
+export function TwitchConnectionCard({ syncCooldownMs, connection }: Props) {
   const isConnected = !!connection?.hasAccessToken
 
   const [fResult, fAction, fPending] = useActionState(syncFollowedGames, null)
   const [dResult, dAction, dPending] = useActionState(syncActiveDrops, null)
-  const followedCooldown = useCooldown("sync:twitch:followed")
-  const dropsCooldown = useCooldown("sync:twitch:drops")
+  const followedCooldown = useCooldown("sync:twitch:followed", syncCooldownMs)
+  const dropsCooldown = useCooldown("sync:twitch:drops", syncCooldownMs)
 
   const [autoSync, setAutoSync] = useState(false)
 
@@ -131,7 +132,9 @@ export function TwitchConnectionCard({ connection }: Props) {
                     : "Synchroniser mes jeux suivis"}
                   {followedCooldown.isOnCooldown && (
                     <span className="text-xs text-muted-foreground ml-2">
-                      ({Math.ceil(followedCooldown.remaining / 60000)} min)
+                      {followedCooldown.remaining >= 60000
+                        ? `${Math.ceil(followedCooldown.remaining / 60000)} min`
+                        : `${Math.ceil(followedCooldown.remaining / 1000)}s`}
                     </span>
                   )}
                 </Button>
@@ -192,7 +195,11 @@ export function TwitchConnectionCard({ connection }: Props) {
                       : dPending
                         ? "Récupération..."
                         : dropsCooldown.isOnCooldown
-                          ? `Synchroniser les drops actifs (${Math.ceil(dropsCooldown.remaining / 60000)} min)`
+                          ? `Synchroniser les drops actifs (${
+                              dropsCooldown.remaining >= 60000
+                                ? `${Math.ceil(dropsCooldown.remaining / 60000)} min`
+                                : `${Math.ceil(dropsCooldown.remaining / 1000)}s`
+                            })`
                           : "Synchroniser les drops actifs"}
                   </Button>
                 </form>
