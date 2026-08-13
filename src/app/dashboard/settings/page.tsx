@@ -4,11 +4,13 @@ import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { SettingsForm } from "./settings-form"
 import { DashboardPreferencesForm } from "./dashboard-preferences-form"
-import { decrypt, maskValue } from "@/lib/encryption"
+import { decrypt, maskValue, safeDecrypt } from "@/lib/encryption"
 import { TwitchConnectionCard } from "./twitch-card"
 import { SteamConnectionCard } from "./steam-card"
 import { DownloadCard } from "./download-card"
 import { DeleteAccountCard } from "./delete-card"
+import { TimezoneSelector } from "./timezone-selector"
+import { formatDate } from "@/lib/timezone"
 
 const twitchMessages: Record<string, string> = {
   success: "Connexion Twitch réussie",
@@ -33,10 +35,11 @@ export default async function SettingsPage(props: {
     userGamesCount,
     followedGamesCount,
     activeDropsCount,
+    syncCooldownSetting,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { checkInterval: true, lastMatchAt: true, dashboardFilter: true, dashboardView: true },
+      select: { checkInterval: true, lastMatchAt: true, timezone: true, dashboardFilter: true, dashboardView: true },
     }),
     prisma.twitchConnection.findUnique({
       where: { userId: session.user.id },
@@ -53,9 +56,17 @@ export default async function SettingsPage(props: {
     prisma.twitchDrop.count({
       where: { isActive: true },
     }),
+    prisma.appSetting.findUnique({
+      where: { key: "SYNC_COOLDOWN_SECONDS" },
+    }),
   ])
 
+  const defaultCooldownSec = Number(process.env.SYNC_COOLDOWN_DEFAULT_SECONDS ?? "300")
+  const syncCooldownMs = (Number(syncCooldownSetting?.value ? safeDecrypt(syncCooldownSetting.value) : defaultCooldownSec)) * 1000
+
   if (!user) redirect("/login")
+
+  const tz = user.timezone ?? "UTC"
 
   return (
     <div className="space-y-6">
@@ -74,7 +85,7 @@ export default async function SettingsPage(props: {
             Fréquence à laquelle le système vérifie les nouveaux drops et les
             compare à ta bibliothèque Steam. Dernière vérification :{" "}
             {user.lastMatchAt
-              ? new Date(user.lastMatchAt).toLocaleString("fr-FR")
+              ? formatDate(user.lastMatchAt, tz)
               : "jamais"}
           </CardDescription>
         </CardHeader>
@@ -98,7 +109,10 @@ export default async function SettingsPage(props: {
         </CardContent>
       </Card>
 
+      <TimezoneSelector currentTimezone={user.timezone ?? null} />
+
       <TwitchConnectionCard
+        syncCooldownMs={syncCooldownMs}
         connection={
           twitchConnection
             ? {
@@ -112,6 +126,8 @@ export default async function SettingsPage(props: {
       />
 
       <SteamConnectionCard
+        syncCooldownMs={syncCooldownMs}
+        timezone={tz}
         connection={
           steamConnection
             ? {

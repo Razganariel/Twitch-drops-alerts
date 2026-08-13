@@ -60,6 +60,7 @@ export default async function DashboardPage(props: {
 
   if (!user) redirect("/login")
 
+  const tz = user.timezone ?? "UTC"
   const view = overrideView === "list" ? "list" : overrideView === "grid" ? "grid" : user.dashboardView === "LIST" ? "list" : "grid"
   const filter = overrideFilter === "all" ? "all" : overrideFilter === "match" ? "match" : user.dashboardFilter === "ALL" ? "all" : "match"
 
@@ -121,6 +122,7 @@ export default async function DashboardPage(props: {
         activeCampaigns={activeDrops.length}
         syncedGames={userGames.length}
         steamLastSyncedAt={steamConn?.lastSyncedAt?.toISOString() ?? null}
+        lastMatchAt={user.lastMatchAt?.toISOString() ?? null}
       />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -195,13 +197,13 @@ export default async function DashboardPage(props: {
       ) : view === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {campaigns.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} />
+            <CampaignCard key={campaign.id} campaign={campaign} timezone={tz} />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
           {campaigns.map((campaign) => (
-            <CampaignRow key={campaign.id} campaign={campaign} />
+            <CampaignRow key={campaign.id} campaign={campaign} timezone={tz} />
           ))}
         </div>
       )}

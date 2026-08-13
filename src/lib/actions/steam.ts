@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { encrypt, decrypt, maskValue } from "@/lib/encryption"
+import { steamSchema } from "@/lib/schemas/steam"
 import { getSteamLibrary, resolveSteamVanityUrl, getSteamLogoUrl } from "@/services/steam"
 import { matchDrops } from "./matching"
 
@@ -21,9 +22,19 @@ export async function connectSteam(
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non authentifié" }
 
-  const steamIdInput = formData.get("steamId") as string
-  const username = formData.get("username") as string
-  const apiKey = formData.get("apiKey") as string
+  const parsed = steamSchema.safeParse({
+    steamId: formData.get("steamId") ?? "",
+    username: formData.get("username") ?? "",
+    apiKey: formData.get("apiKey") ?? "",
+  })
+
+  if (!parsed.success) {
+    const errors = parsed.error.flatten().fieldErrors
+    const firstError = Object.values(errors).flat()[0]
+    return { ok: false, message: firstError ?? "Données invalides" }
+  }
+
+  const { steamId: steamIdInput, username, apiKey } = parsed.data
 
   const existing = await prisma.steamConnection.findUnique({
     where: { userId: session.user.id },

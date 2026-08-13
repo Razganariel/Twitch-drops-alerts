@@ -1,10 +1,12 @@
+import "./logger"
 import { prisma } from "@/lib/prisma"
 import { getActiveDropCampaigns, getDropCampaignDetails } from "@/services/twitch"
 import { getSyncGqlToken } from "@/services/sync-account"
 import { parseTwitchDate } from "@/lib/timezone"
 import { normalize } from "@/lib/utils"
-import { safeDecrypt } from "@/lib/encryption"
+import { safeDecrypt, encrypt, decrypt } from "@/lib/encryption"
 import { sendDropAlert } from "@/services/email"
+import { getSteamLibrary, getSteamLogoUrl } from "@/services/steam"
 
 type DropItemData = {
   name: string
@@ -52,6 +54,7 @@ export async function runPeriodicSync() {
   }
 
   const now = new Date()
+  const DAY_MS = 86_400_000
 
   const dueUsers = connectedUsers.filter((user) => {
     if (!user.lastMatchAt) return true
@@ -186,6 +189,94 @@ export async function runPeriodicSync() {
   let totalAlerts = 0
 
   for (const user of dueUsers) {
+    const sc = user.steamConnection!
+    const lastSync = sc.lastSyncedAt?.getTime() ?? 0
+    if (now.getTime() - lastSync >= DAY_MS) {
+      console.log(`[sync] Synchro bibliothèque Steam pour l'utilisateur ${user.id}`)
+      try {
+        const apiKey = decrypt(sc.steamApiKey)
+        const steamId = decrypt(sc.steamId)
+
+        const rawGames = await getSteamLibrary(steamId, apiKey)
+
+        const games = rawGames.filter((g) => {
+          const lower = g.name.toLowerCase()
+          return !lower.includes("demo") && !lower.includes("playtest")
+        })
+
+        const apiAppIds = new Set(games.map((g) => g.appid))
+
+        const existingUserGames = await prisma.userGame.findMany({
+          where: { userId: user.id },
+          select: { gameId: true, game: { select: { id: true, steamAppId: true } } },
+        })
+
+        const existingSteamIds = new Set(existingUserGames.map((e) => e.game.steamAppId))
+
+        const newGames = games.filter((g) => !existingSteamIds.has(g.appid))
+
+        for (const game of games) {
+          await prisma.game.upsert({
+            where: { steamAppId: game.appid },
+            update: {
+              name: encrypt(game.name),
+              logoUrl: getSteamLogoUrl(game.appid, game.img_logo_url),
+            },
+            create: {
+              steamAppId: game.appid,
+              name: encrypt(game.name),
+              logoUrl: getSteamLogoUrl(game.appid, game.img_logo_url),
+            },
+          })
+        }
+
+        for (const game of newGames) {
+          const dbGame = await prisma.game.findUnique({
+            where: { steamAppId: game.appid },
+          })
+          if (dbGame) {
+            await prisma.userGame.create({
+              data: { userId: user.id, gameId: dbGame.id },
+            })
+          }
+        }
+
+        const removedEntries = existingUserGames.filter(
+          (e) => !apiAppIds.has(e.game.steamAppId)
+        )
+        const removedGameIds = removedEntries.map((e) => e.game.id)
+
+        if (removedGameIds.length > 0) {
+          await prisma.userGame.deleteMany({
+            where: { userId: user.id, gameId: { in: removedGameIds } },
+          })
+
+          const orphanedGames = await prisma.game.findMany({
+            where: {
+              id: { in: removedGameIds },
+              userGames: { none: {} },
+              alerts: { none: {} },
+            },
+          })
+
+          if (orphanedGames.length > 0) {
+            await prisma.game.deleteMany({
+              where: { id: { in: orphanedGames.map((g) => g.id) } },
+            })
+          }
+        }
+
+        await prisma.steamConnection.update({
+          where: { userId: user.id },
+          data: { lastSyncedAt: now },
+        })
+
+        console.log(`[sync] Bibliothèque Steam OK: ${games.length} jeux, ${newGames.length} nouveaux, ${removedGameIds.length} retirés`)
+      } catch (e) {
+        console.error(`[sync] Échec synchro Steam pour l'utilisateur ${user.id}:`, e)
+      }
+    }
+
     const userGames = await prisma.userGame.findMany({
       where: { userId: user.id, isAlertEnabled: true, deletedAt: null },
       include: { game: true },
@@ -209,41 +300,6 @@ export async function runPeriodicSync() {
         orderBy: { sortOrder: "asc" },
       })
 
-      const alertData: AlertJobData = {
-        userId: user.id,
-        email: safeDecrypt(user.email!),
-        gameName: drop.gameName,
-        gameBoxArtUrl: drop.gameBoxArtUrl,
-        gameSteamAppId: matchedGame.game.steamAppId,
-        dropName: drop.campaignName,
-        startAt: drop.startAt.toISOString(),
-        endAt: drop.endAt.toISOString(),
-        twitchUrl: "https://www.twitch.tv/drops/inventory",
-        dropItems: dropItems.map((di) => ({
-          name: di.name,
-          rewardName: di.rewardName,
-          rewardImageUrl: di.rewardImageUrl,
-          requiredMinutesWatched: di.requiredMinutesWatched,
-        })),
-      }
-
-      try {
-        await sendDropAlert({
-          to: alertData.email,
-          gameName: alertData.gameName,
-          gameBoxArtUrl: alertData.gameBoxArtUrl,
-          gameSteamAppId: alertData.gameSteamAppId,
-          dropName: alertData.dropName,
-          startAt: new Date(alertData.startAt),
-          endAt: new Date(alertData.endAt),
-          twitchUrl: alertData.twitchUrl,
-          dropItems: alertData.dropItems,
-        })
-      } catch (e) {
-        console.error("[sync] Échec envoi email:", e)
-        continue
-      }
-
       const existing = await prisma.alert.findFirst({
         where: {
           userId: user.id,
@@ -261,6 +317,28 @@ export async function runPeriodicSync() {
           dropId: drop.id,
         },
       })
+
+      try {
+        await sendDropAlert({
+          to: safeDecrypt(user.email!),
+          gameName: drop.gameName,
+          gameBoxArtUrl: drop.gameBoxArtUrl,
+          gameSteamAppId: matchedGame.game.steamAppId,
+          dropName: drop.campaignName,
+          startAt: drop.startAt,
+          endAt: drop.endAt,
+          twitchUrl: "https://www.twitch.tv/drops/inventory",
+          dropItems: dropItems.map((di) => ({
+            name: di.name,
+            rewardName: di.rewardName,
+            rewardImageUrl: di.rewardImageUrl,
+            requiredMinutesWatched: di.requiredMinutesWatched,
+          })),
+        })
+      } catch (e) {
+        console.error("[sync] Échec envoi email:", e)
+        continue
+      }
 
       matchCount++
     }

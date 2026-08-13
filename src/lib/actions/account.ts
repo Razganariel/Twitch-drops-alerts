@@ -4,8 +4,14 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { maskValue, safeDecrypt } from "@/lib/encryption"
 import { createOtp, sendOtpEmail, verifyOtp } from "@/lib/otp"
+import { z } from "zod"
+
+const purposeSchema = z.enum(["download", "delete"], { message: "Finalité invalide" })
+const otpCodeSchema = z.string().length(6, "Le code fait 6 chiffres").regex(/^\d{6}$/, "Code invalide")
 
 export async function requestOtp(purpose: "download" | "delete") {
+  const parsed = purposeSchema.safeParse(purpose)
+  if (!parsed.success) return { ok: false, message: "Finalité invalide" } as const
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non connecté" } as const
 
@@ -26,7 +32,10 @@ export async function downloadUserData(code: string) {
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non connecté" } as const
 
-  const valid = await verifyOtp(session.user.id, "download", code)
+  const codeParsed = otpCodeSchema.safeParse(code)
+  if (!codeParsed.success) return { ok: false, message: "Code invalide" } as const
+
+  const valid = await verifyOtp(session.user.id, "download", codeParsed.data)
   if (!valid) return { ok: false, message: "Code invalide ou expiré" } as const
 
   const user = await prisma.user.findUnique({
@@ -74,7 +83,10 @@ export async function deleteAccount(code: string) {
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non connecté" } as const
 
-  const valid = await verifyOtp(session.user.id, "delete", code)
+  const codeParsed = otpCodeSchema.safeParse(code)
+  if (!codeParsed.success) return { ok: false, message: "Code invalide" } as const
+
+  const valid = await verifyOtp(session.user.id, "delete", codeParsed.data)
   if (!valid) return { ok: false, message: "Code invalide ou expiré" } as const
 
   await prisma.user.delete({ where: { id: session.user.id } })
