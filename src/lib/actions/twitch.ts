@@ -212,30 +212,31 @@ export async function syncActiveDrops(
   const gqlToken = await getValidGqlToken(session.user.id)
   const twitchLogin = gqlConnection?.twitchLogin ? decrypt(gqlConnection.twitchLogin) : null
 
-  if (!gqlToken) {
-    return {
-      ok: false,
-      needsGqlAuth: true,
-      message: "Autorisation GQL requise",
-    }
-  }
-
   let campaigns: Awaited<ReturnType<typeof getActiveDropCampaigns>>
   try {
-    campaigns = await getActiveDropCampaigns(gqlToken)
+    campaigns = await getActiveDropCampaigns(gqlToken ?? undefined)
   } catch (e) {
-    if (e instanceof Error && e.message.includes("failed integrity check")) {
-      await prisma.twitchConnection.update({
-        where: { userId: session.user.id },
-        data: { gqlAccessToken: null, gqlRefreshToken: null, gqlTokenExpiresAt: null },
-      })
+    const message = e instanceof Error ? e.message : String(e)
+    const authIssue =
+      message.includes("failed integrity check") ||
+      message.includes("unauthenticated") ||
+      !gqlToken
+
+    if (authIssue) {
+      if (message.includes("failed integrity check") || message.includes("unauthenticated")) {
+        await prisma.twitchConnection.update({
+          where: { userId: session.user.id },
+          data: { gqlAccessToken: null, gqlRefreshToken: null, gqlTokenExpiresAt: null },
+        })
+      }
       return {
         ok: false,
         needsGqlAuth: true,
-        message: "Token invalide, merci de ré-autoriser",
+        message: gqlToken ? "Token invalide, merci de ré-autoriser" : "Autorisation GQL requise",
       }
     }
-    throw e
+
+    return { ok: false, message: "Échec de la récupération des drops" }
   }
 
   await prisma.twitchDrop.updateMany({
@@ -257,7 +258,7 @@ export async function syncActiveDrops(
 
     let items = campaign.timeBasedDrops ?? []
 
-    if (items.length === 0 && twitchLogin) {
+    if (items.length === 0 && gqlToken && twitchLogin) {
       try {
         const details = await getDropCampaignDetails(gqlToken, campaign.id, twitchLogin)
         if (details?.timeBasedDrops) {
