@@ -68,14 +68,10 @@ export async function runPeriodicSync() {
   }
 
   const gqlToken = await getSyncGqlToken()
-  if (!gqlToken) {
-    console.log("[sync] Aucun token de service disponible")
-    return { ok: false, count: 0 }
-  }
 
   let campaigns
   try {
-    campaigns = await getActiveDropCampaigns(gqlToken)
+    campaigns = await getActiveDropCampaigns(gqlToken ?? undefined)
   } catch (e) {
     console.error("[sync] Échec de la récupération des drops:", e)
     return { ok: false, count: 0 }
