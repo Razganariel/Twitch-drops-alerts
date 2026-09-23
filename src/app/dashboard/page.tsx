@@ -117,7 +117,6 @@ export default async function DashboardPage(props: {
 
       <ConnectionBanner
         twitchConnected={!!twitchConn?.accessToken}
-        gqlConnected={!!twitchConn?.gqlAccessToken}
         steamConnected={!!steamConn}
         activeCampaigns={activeDrops.length}
         syncedGames={userGames.length}
