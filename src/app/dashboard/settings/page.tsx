@@ -9,6 +9,7 @@ import { TwitchConnectionCard } from "./twitch-card"
 import { SteamConnectionCard } from "./steam-card"
 import { DownloadCard } from "./download-card"
 import { DeleteAccountCard } from "./delete-card"
+import { SupportCard } from "./support-card"
 import { TimezoneSelector } from "./timezone-selector"
 import { formatDate } from "@/lib/timezone"
 
@@ -140,6 +141,7 @@ export default async function SettingsPage(props: {
       />
 
       <DownloadCard />
+      <SupportCard />
       <DeleteAccountCard />
     </div>
   )

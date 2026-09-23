@@ -12,7 +12,10 @@ import {
   ArrowRight,
   ExternalLink,
   Repeat2,
+  Coffee,
 } from "lucide-react"
+import { KOFI_URL } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export function generateMetadata(): Metadata {
   return {
@@ -194,6 +197,26 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <section className="border-t py-16 md:py-24 px-6">
+          <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-6">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
+              <Coffee className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h2 className="text-3xl font-bold">Soutenez le projet</h2>
+            <p className="text-muted-foreground max-w-md">
+              Twitch Drops Alerts est gratuit, sans publicité et open source. Si
+              vous ne ratez plus aucun drop, un café sur Ko-fi est toujours
+              apprécié pour soutenir son développement.
+            </p>
+            <Button asChild size="lg" variant="outline">
+              <a href={KOFI_URL} target="_blank" rel="noopener noreferrer">
+                <Coffee className="h-5 w-5" />
+                Nous soutenir sur Ko-fi
+              </a>
+            </Button>
+          </div>
+        </section>
       </main>
 
       <footer className="border-t py-8 px-6">
@@ -234,6 +257,15 @@ export default async function Home() {
               <ExternalLink className="h-4 w-4" />
               GitHub
             </Link>
+            <a
+              href={KOFI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Coffee className="h-4 w-4" />
+              Ko-fi
+            </a>
           </div>
         </div>
       </footer>
