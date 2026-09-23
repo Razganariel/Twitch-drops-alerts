@@ -1,7 +1,14 @@
 const TWITCH_API_BASE = "https://api.twitch.tv/helix"
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2"
 const TWITCH_GQL_BASE = "https://gql.twitch.tv/gql"
-const TWITCH_ANDROID_CLIENT_ID = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp"
+const TWITCH_GQL_CLIENT_ID = "ue6666qo983tsx6so1t0vnawi233wa"
+const TWITCH_DROPS_API_BASE = process.env.TWITCH_DROPS_API_BASE ?? "https://twitch-drops-api.sunkwi.com"
+
+type DropSource = "api" | "gql" | "hybrid"
+const DROP_SOURCE: DropSource =
+  process.env.TWITCH_DROPS_SOURCE === "api" || process.env.TWITCH_DROPS_SOURCE === "gql"
+    ? process.env.TWITCH_DROPS_SOURCE
+    : "hybrid"
 
 import crypto from "node:crypto"
 
@@ -34,12 +41,12 @@ async function fetchGQL(
     method: "POST",
     headers: {
       Authorization: `OAuth ${accessToken}`,
-      "Client-Id": TWITCH_ANDROID_CLIENT_ID,
+      "Client-Id": TWITCH_GQL_CLIENT_ID,
       "Content-Type": "application/json",
       "Client-Session-Id": gqlSessionId,
       "X-Device-Id": gqlDeviceId,
       "User-Agent":
-        "Dalvik/2.1.0 (Linux; U; Android 7.1.2; SM-G977N Build/LMY48Z) tv.twitch.android.app/16.8.1/1608010",
+        "Mozilla/5.0 (Linux; Android 7.1; Smart Box C1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
       Origin: "https://www.twitch.tv",
       Referer: "https://www.twitch.tv",
     },
@@ -173,7 +180,7 @@ export async function startDeviceFlow(): Promise<DeviceFlowResponse> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: TWITCH_ANDROID_CLIENT_ID,
+      client_id: TWITCH_GQL_CLIENT_ID,
       scopes: "user:read:follows",
     }),
   })
@@ -193,7 +200,7 @@ export async function pollDeviceFlow(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: TWITCH_ANDROID_CLIENT_ID,
+      client_id: TWITCH_GQL_CLIENT_ID,
       device_code: deviceCode,
       grant_type: "urn:ietf:params:oauth:grant-type:device_code",
     }),
@@ -220,7 +227,7 @@ export async function refreshGqlToken(refreshToken: string) {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: TWITCH_ANDROID_CLIENT_ID,
+      client_id: TWITCH_GQL_CLIENT_ID,
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }),
@@ -239,8 +246,30 @@ export async function refreshGqlToken(refreshToken: string) {
 }
 
 export async function getActiveDropCampaigns(
-  accessToken: string
+  accessToken?: string
 ): Promise<TwitchDropCampaign[]> {
+  const tryApi = DROP_SOURCE !== "gql"
+  const tryGql = !!accessToken && DROP_SOURCE !== "api"
+
+  let apiError: unknown
+  if (tryApi) {
+    try {
+      return await getActiveDropCampaignsFromApi()
+    } catch (e) {
+      apiError = e
+      if (DROP_SOURCE === "api") throw e
+      console.error("[twitch] Source drops API indisponible, bascule GQL:", e)
+    }
+  }
+
+  if (tryGql) {
+    return getActiveDropCampaignsFromGql(accessToken!)
+  }
+
+  throw apiError instanceof Error ? apiError : new Error("Aucune source de drops disponible")
+}
+
+async function getActiveDropCampaignsFromGql(accessToken: string): Promise<TwitchDropCampaign[]> {
   const json = await fetchGQL(
     accessToken,
     "ViewerDropsDashboard",
@@ -260,6 +289,95 @@ export async function getActiveDropCampaigns(
   return (
     campaigns?.filter((c) => c.status === "ACTIVE" && c.game && new Date(c.endAt) > new Date()) ?? []
   )
+}
+
+type SunkwiBotBenefit = {
+  id: string
+  name: string
+  imageAssetURL?: string
+  imageURL?: string
+}
+
+type SunkwiBotTimeBasedDrop = {
+  id: string
+  name: string
+  startAt: string
+  endAt: string
+  requiredMinutesWatched: number
+  benefitEdges?: Array<{ benefit: SunkwiBotBenefit }>
+}
+
+type SunkwiBotReward = {
+  id: string
+  name: string
+  startAt: string
+  endAt: string
+  status: string
+  imageURL?: string
+  timeBasedDrops?: SunkwiBotTimeBasedDrop[]
+}
+
+type SunkwiBotDropsEntry = {
+  gameId: string
+  gameDisplayName: string
+  gameBoxArtURL?: string
+  rewards?: SunkwiBotReward[]
+}
+
+export async function getActiveDropCampaignsFromApi(): Promise<TwitchDropCampaign[]> {
+  const response = await fetch(`${TWITCH_DROPS_API_BASE}/drops`, {
+    signal: AbortSignal.timeout(10_000),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Twitch Drops API error: ${response.status} ${response.statusText}`)
+  }
+
+  const payload = (await response.json()) as SunkwiBotDropsEntry[] | unknown
+  if (!Array.isArray(payload)) {
+    throw new Error("Twitch Drops API: réponse inattendue")
+  }
+
+  return mapSunkwiBotDrops(payload)
+}
+
+function mapSunkwiBotDrops(payload: SunkwiBotDropsEntry[]): TwitchDropCampaign[] {
+  const now = new Date()
+  const campaigns: TwitchDropCampaign[] = []
+
+  for (const entry of payload) {
+    const game = {
+      id: entry.gameId,
+      name: entry.gameDisplayName,
+      displayName: entry.gameDisplayName,
+      boxArtURL: entry.gameBoxArtURL,
+    }
+
+    for (const reward of entry.rewards ?? []) {
+      if (reward.status !== "ACTIVE") continue
+      if (new Date(reward.endAt) <= now) continue
+
+      campaigns.push({
+        id: reward.id,
+        name: reward.name,
+        status: reward.status,
+        startAt: reward.startAt,
+        endAt: reward.endAt,
+        game,
+        imageURL: reward.imageURL,
+        timeBasedDrops: reward.timeBasedDrops?.map((d) => ({
+          id: d.id,
+          name: d.name,
+          startAt: d.startAt,
+          endAt: d.endAt,
+          requiredMinutesWatched: d.requiredMinutesWatched,
+          benefitEdges: d.benefitEdges,
+        })),
+      })
+    }
+  }
+
+  return campaigns
 }
 
 export async function getDropCampaignDetails(
