@@ -4,6 +4,7 @@ import { hashValue } from "@/lib/encryption"
 
 const OTP_LENGTH = 6
 const OTP_TTL_MS = 10 * 60 * 1000
+const OTP_MAX_ATTEMPTS = 5
 
 function generateCode(): string {
   const code = crypto.randomInt(0, 10 ** OTP_LENGTH)
@@ -14,7 +15,7 @@ export async function createOtp(userId: string, purpose: string): Promise<string
   const code = generateCode()
 
   await prisma.otpCode.deleteMany({
-    where: { userId, purpose, expiresAt: { lt: new Date() } },
+    where: { userId, purpose },
   })
 
   const expiresAt = new Date(Date.now() + OTP_TTL_MS)
@@ -31,16 +32,27 @@ export async function createOtp(userId: string, purpose: string): Promise<string
 }
 
 export async function verifyOtp(userId: string, purpose: string, code: string): Promise<boolean> {
-  const codeHash = hashValue(code)
-
   const record = await prisma.otpCode.findFirst({
-    where: { userId, purpose, codeHash, expiresAt: { gt: new Date() } },
+    where: { userId, purpose, expiresAt: { gt: new Date() } },
   })
 
   if (!record) return false
 
-  await prisma.otpCode.delete({ where: { id: record.id } })
-  return true
+  if (hashValue(code) === record.codeHash) {
+    await prisma.otpCode.delete({ where: { id: record.id } })
+    return true
+  }
+
+  if (record.attempts + 1 >= OTP_MAX_ATTEMPTS) {
+    await prisma.otpCode.delete({ where: { id: record.id } })
+    return false
+  }
+
+  await prisma.otpCode.update({
+    where: { id: record.id },
+    data: { attempts: record.attempts + 1 },
+  })
+  return false
 }
 
 export async function sendOtpEmail(email: string, code: string, purpose: string) {
