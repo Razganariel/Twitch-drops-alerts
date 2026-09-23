@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Power, PowerOff, Pencil } from "lucide-react"
+import { Power, PowerOff, Pencil, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getSettings, saveSetting, testSetting, toggleMaintenance, getEnvSettings } from "@/lib/actions/admin"
+import { getSettings, saveSetting, testSetting, toggleMaintenance, getEnvSettings, forceSync } from "@/lib/actions/admin"
 import { Loader2, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react"
 
 type SettingEntry = {
@@ -60,6 +60,8 @@ export default function AdminPage() {
   const [savingTwitch, setSavingTwitch] = useState(false)
   const [syncCooldownValue, setSyncCooldownValue] = useState("")
   const [savingCooldown, setSavingCooldown] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{ ok: boolean; count: number } | null>(null)
 
   const loadSettings = useCallback(async () => {
     try {
@@ -120,6 +122,16 @@ export default function AdminPage() {
     setTogglingMaintenance(false)
   }
 
+  async function handleForceSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const result = await forceSync()
+      setSyncResult(result)
+    } catch {}
+    setSyncing(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -165,6 +177,40 @@ export default function AdminPage() {
             </Button>
           </div>
         </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Synchronisation des drops</CardTitle>
+          <CardDescription>
+            Déclencher immédiatement la synchro des campagnes et les alertes,
+            sans attendre le cycle automatique du worker (60 s)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={handleForceSync}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {syncing ? "Synchronisation en cours..." : "Forcer la synchro"}
+            </Button>
+            {syncResult && (
+              <span className={`text-sm ${syncResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {syncResult.ok
+                  ? `${syncResult.count} alerte${syncResult.count > 1 ? "s" : ""} générée${syncResult.count > 1 ? "s" : ""}`
+                  : "Échec de la synchronisation"}
+              </span>
+            )}
+          </div>
+        </CardContent>
       </Card>
 
       <Card>
@@ -337,7 +383,7 @@ export default function AdminPage() {
       <Card>
         <CardHeader>
           <CardTitle>Cooldown de synchronisation</CardTitle>
-          <CardDescription>Délai minimum (en secondes) entre deux synchronisations manuelles des drops Twitch et de la bibliothèque Steam</CardDescription>
+          <CardDescription>Délai minimum (en secondes) entre deux synchronisations manuelles des jeux suivis Twitch ou de la bibliothèque Steam</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-3">
