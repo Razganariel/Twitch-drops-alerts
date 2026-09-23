@@ -133,8 +133,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Twitch({
       clientId: process.env.TWITCH_CLIENT_ID!,
       clientSecret: process.env.TWITCH_CLIENT_SECRET!,
-      checks: [],
-      allowDangerousEmailAccountLinking: true,
+      checks: ["state"],
       authorization: {
         params: {
           scope: "openid user:read:email user:read:follows",
