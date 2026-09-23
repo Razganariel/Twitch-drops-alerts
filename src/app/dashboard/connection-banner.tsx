@@ -6,7 +6,6 @@ import { CheckCircle2, XCircle } from "lucide-react"
 
 type Props = {
   twitchConnected: boolean
-  gqlConnected: boolean
   steamConnected: boolean
   activeCampaigns: number
   syncedGames: number
@@ -46,7 +45,6 @@ function Elapsed({ at }: { at: string | null }) {
 
 export function ConnectionBanner({
   twitchConnected,
-  gqlConnected,
   steamConnected,
   activeCampaigns,
   syncedGames,
@@ -62,16 +60,6 @@ export function ConnectionBanner({
           <XCircle className="h-5 w-5 text-destructive" aria-label="Non synchronisé" />
         )}
       </SyncBadge>
-
-      <Link href="/dashboard/settings">
-        <SyncBadge label="Sync drops">
-          {gqlConnected ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-label="Synchronisé" />
-          ) : (
-            <XCircle className="h-5 w-5 text-destructive" aria-label="Non synchronisé" />
-          )}
-        </SyncBadge>
-      </Link>
 
       <SyncBadge label="Match drops">
         <Elapsed at={lastMatchAt} />

@@ -102,9 +102,6 @@ model TwitchConnection {
   accessToken       String?
   refreshToken      String?
   expiresAt         DateTime?
-  gqlAccessToken    String?
-  gqlRefreshToken   String?
-  gqlTokenExpiresAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

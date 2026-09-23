@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, useActionState, startTransition } from "react"
+import { useActionState } from "react"
 import { signIn } from "next-auth/react"
-import { syncFollowedGames, syncActiveDrops, startGqlDeviceFlow, checkGqlDeviceFlow } from "@/lib/actions/twitch"
+import { syncFollowedGames } from "@/lib/actions/twitch"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -22,75 +22,7 @@ export function TwitchConnectionCard({ syncCooldownMs, connection }: Props) {
   const isConnected = !!connection?.hasAccessToken
 
   const [fResult, fAction, fPending] = useActionState(syncFollowedGames, null)
-  const [dResult, dAction, dPending] = useActionState(syncActiveDrops, null)
   const followedCooldown = useCooldown("sync:twitch:followed", syncCooldownMs)
-  const dropsCooldown = useCooldown("sync:twitch:drops", syncCooldownMs)
-
-  const [autoSync, setAutoSync] = useState(false)
-
-  const [gql, setGql] = useState<{
-    step: "idle" | "code" | "polling" | "done" | "error"
-    userCode?: string
-    verificationUri?: string
-    message?: string
-  }>({ step: "idle" })
-
-  const needsGqlAuth = dResult && "needsGqlAuth" in dResult && dResult.needsGqlAuth
-
-  const handleGqlAuth = useCallback(async () => {
-    const flow = await startGqlDeviceFlow()
-    if (!flow.ok || !flow.deviceCode) {
-      setGql({ step: "error", message: flow.message ?? "Erreur" })
-      return
-    }
-
-    setGql({
-      step: "polling",
-      userCode: flow.userCode,
-      verificationUri: flow.verificationUri,
-    })
-
-    const poll = async () => {
-      const r = await checkGqlDeviceFlow(flow.deviceCode!)
-
-      if (r.pending) {
-        setTimeout(poll, (flow.interval ?? 5) * 1000)
-        return
-      }
-
-      setGql({
-        step: r.ok ? "done" : "error",
-        message: r.ok ? "Autorisation réussie ! Synchronisation en cours..." : r.message,
-      })
-    }
-
-    setTimeout(poll, (flow.interval ?? 5) * 1000)
-  }, [])
-
-  const dropsFormRef = useRef<HTMLFormElement>(null)
-
-  useEffect(() => {
-    if (gql.step === "done") {
-      setAutoSync(true)
-      const formData = new FormData()
-      formData.set("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone)
-      startTransition(() => {
-        dAction(formData)
-      })
-    }
-  }, [gql.step, dAction])
-
-  useEffect(() => {
-    if (dResult) {
-      setAutoSync(false)
-    }
-  }, [dResult])
-
-  useEffect(() => {
-    if (dResult && dResult.ok && !("needsGqlAuth" in dResult)) {
-      dropsCooldown.markSynced()
-    }
-  }, [dResult, dropsCooldown])
 
   return (
     <Card>
@@ -147,74 +79,12 @@ export function TwitchConnectionCard({ syncCooldownMs, connection }: Props) {
             </div>
 
             {connection!.activeDropsCount > 0 && (
-                <p className="text-sm text-muted-foreground mb-2">
-                  {connection!.activeDropsCount} campagne
-                  {connection!.activeDropsCount > 1 ? "s" : ""} de drops active
-                  {connection!.activeDropsCount > 1 ? "s" : ""} en base
-                </p>
-              )}
-
-              <div>
-              {needsGqlAuth && gql.step === "idle" ? (
-                <Button variant="secondary" className="w-full" onClick={handleGqlAuth}>
-                  Autoriser l&apos;accès aux drops
-                </Button>
-              ) : gql.step === "polling" ? (
-                <div className="space-y-3 rounded-md border p-4 text-center">
-                  <p className="text-sm font-medium">Autorise l&apos;accès aux drops Twitch</p>
-                  <ol className="text-left text-sm space-y-2">
-                    <li>
-                      1. Va sur{" "}
-                      <a
-                        href={gql.verificationUri}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline text-primary"
-                      >
-                        {gql.verificationUri}
-                      </a>
-                    </li>
-                    <li>2. Connecte-toi si nécessaire</li>
-                    <li>
-                      3. Entre le code :{" "}
-                      <span className="font-mono font-bold text-lg tracking-widest">
-                        {gql.userCode}
-                      </span>
-                    </li>
-                  </ol>
-                  <p className="text-sm text-muted-foreground animate-pulse">
-                    En attente d&apos;autorisation...
-                  </p>
-                </div>
-              ) : (
-                <form ref={dropsFormRef} action={(formData) => dAction(formData)}>
-                  <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
-                  <Button variant="secondary" className="w-full" disabled={dPending || dropsCooldown.isOnCooldown || autoSync}>
-                    {autoSync
-                      ? "Synchronisation en cours..."
-                      : dPending
-                        ? "Récupération..."
-                        : dropsCooldown.isOnCooldown
-                          ? `Synchroniser les drops actifs (${
-                              dropsCooldown.remaining >= 60000
-                                ? `${Math.ceil(dropsCooldown.remaining / 60000)} min`
-                                : `${Math.ceil(dropsCooldown.remaining / 1000)}s`
-                            })`
-                          : "Synchroniser les drops actifs"}
-                  </Button>
-                </form>
-              )}
-
-              {gql.step === "error" && (
-                <p className="text-sm text-destructive">{gql.message}</p>
-              )}
-
-              {dResult && !("needsGqlAuth" in dResult) && (
-                <p className={`mt-1 text-sm ${dResult.ok ? "text-emerald-600" : "text-destructive"}`}>
-                  {dResult.message}
-                </p>
-              )}
-            </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                {connection!.activeDropsCount} campagne
+                {connection!.activeDropsCount > 1 ? "s" : ""} de drops active
+                {connection!.activeDropsCount > 1 ? "s" : ""} en base
+              </p>
+            )}
           </div>
         )}
       </CardContent>
