@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { encrypt, decrypt, safeDecrypt, hashValue } from "@/lib/encryption"
 import { loginSchema } from "@/lib/schemas/auth"
-import { checkRateLimit } from "@/lib/rate-limit"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 
 declare module "next-auth" {
   interface Session {
@@ -103,13 +103,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
         const { email, password } = parsed.data
         const emailHash = hashValue(email)
+        const ip = getClientIp(request.headers)
+
         if (!checkRateLimit(`login:${emailHash}`)) return null
+        if (!checkRateLimit(`login:${ip}`, 20)) return null
 
         const user = await prisma.user.findUnique({ where: { emailHash } })
 
