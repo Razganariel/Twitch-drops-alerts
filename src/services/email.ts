@@ -1,8 +1,9 @@
 import { Resend } from "resend"
 import nodemailer from "nodemailer"
+import type { Transporter } from "nodemailer"
 
 let resend: Resend | null = null
-let smtpTransport: nodemailer.Transporter | null = null
+let smtpTransport: Transporter | null = null
 
 function getResend() {
   if (!resend) {
