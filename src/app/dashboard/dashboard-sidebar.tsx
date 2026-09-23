@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Coffee } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { ModeToggle } from "@/components/shared/mode-toggle"
 import { LogoutButton } from "./logout-button"
+import { KOFI_URL } from "@/lib/utils"
 
 type Props = {
   unreadCount: number
@@ -68,6 +69,16 @@ export function DashboardSidebar({ unreadCount, isAdmin }: Props) {
 
   const secondaryNav = (
     <nav className="flex flex-col gap-2 shrink-0">
+      <a
+        href={KOFI_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
+        onClick={() => setOpen(false)}
+      >
+        <Coffee className="h-4 w-4" />
+        Soutenir le projet
+      </a>
       <Link
         href="/faq"
         className="rounded-md px-3 py-2 text-sm font-medium hover:bg-muted"
