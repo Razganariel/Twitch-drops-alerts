@@ -6,6 +6,7 @@ import { encrypt, safeDecrypt } from "@/lib/encryption"
 import { settingSchema } from "@/lib/schemas/admin"
 import { testTwitchClientId, testTwitchCredentials, testResend, testSmtp } from "@/services/health"
 import { setMaintenanceValue } from "@/lib/maintenance"
+import { runPeriodicSync } from "@/lib/sync"
 
 async function requireAdmin() {
   const session = await auth()
@@ -127,6 +128,18 @@ function maskEnvUrl(value: string): string {
   } catch {
     if (value.length > 8) return value.slice(0, 4) + "******" + value.slice(-4)
     return "******"
+  }
+}
+
+export async function forceSync() {
+  await requireAdmin()
+
+  try {
+    const result = await runPeriodicSync()
+    return { ok: result.ok, count: result.count } as const
+  } catch (e) {
+    console.error("[admin] Échec de la synchro forcée:", e)
+    return { ok: false, count: 0 } as const
   }
 }
 
