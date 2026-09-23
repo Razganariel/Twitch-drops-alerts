@@ -15,19 +15,6 @@ type DropItemData = {
   requiredMinutesWatched: number | null
 }
 
-type AlertJobData = {
-  userId: string
-  email: string
-  gameName: string
-  gameBoxArtUrl: string | null
-  gameSteamAppId: number | null
-  dropName: string
-  startAt: string
-  endAt: string
-  twitchUrl: string
-  dropItems: DropItemData[]
-}
-
 export async function runPeriodicSync() {
   console.log("[sync] Début de la synchronisation planifiée")
 
