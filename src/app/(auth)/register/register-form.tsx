@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { registerSchema } from "@/lib/schemas/auth"
 
 function InlineCheckbox({ id, name, required }: { id: string; name: string; required?: boolean }) {
   return (
@@ -25,14 +26,28 @@ function InlineCheckbox({ id, name, required }: { id: string; name: string; requ
 
 export function RegisterForm({ twitchEnabled }: { twitchEnabled: boolean }) {
   const router = useRouter()
+  const [clientErrors, setClientErrors] = useState<Record<string, string[]> | null>(null)
 
   async function handleSubmit(prevState: string | undefined, formData: FormData) {
+    setClientErrors(null)
+
+    const parsed = registerSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+    })
+
+    if (!parsed.success) {
+      setClientErrors(parsed.error.flatten().fieldErrors)
+      return prevState
+    }
+
     const error = await registerUser(prevState, formData)
     if (error) return error
 
     await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
+      email: parsed.data.email,
+      password: parsed.data.password,
       redirect: false,
     })
 
@@ -81,6 +96,15 @@ export function RegisterForm({ twitchEnabled }: { twitchEnabled: boolean }) {
                 </Link>
               </Label>
             </div>
+            {clientErrors?.name && (
+              <p className="text-sm text-destructive">{clientErrors.name[0]}</p>
+            )}
+            {clientErrors?.email && (
+              <p className="text-sm text-destructive">{clientErrors.email[0]}</p>
+            )}
+            {clientErrors?.password && (
+              <p className="text-sm text-destructive">{clientErrors.password[0]}</p>
+            )}
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}

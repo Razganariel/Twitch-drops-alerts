@@ -53,6 +53,24 @@ export async function matchDrops() {
       orderBy: { sortOrder: "asc" },
     })
 
+    const existing = await prisma.alert.findFirst({
+      where: {
+        userId: session.user.id,
+        gameId: matchedGame.game.id,
+        dropId: drop.id,
+      },
+    })
+
+    if (existing) continue
+
+    await prisma.alert.create({
+      data: {
+        userId: session.user.id,
+        gameId: matchedGame.game.id,
+        dropId: drop.id,
+      },
+    })
+
     try {
       await sendDropAlert({
         to: userEmail,
@@ -74,24 +92,6 @@ export async function matchDrops() {
       console.error("[matching] Échec envoi email:", e)
       continue
     }
-
-    const existing = await prisma.alert.findFirst({
-      where: {
-        userId: session.user.id,
-        gameId: matchedGame.game.id,
-        dropId: drop.id,
-      },
-    })
-
-    if (existing) continue
-
-    await prisma.alert.create({
-      data: {
-        userId: session.user.id,
-        gameId: matchedGame.game.id,
-        dropId: drop.id,
-      },
-    })
 
     matchCount++
   }

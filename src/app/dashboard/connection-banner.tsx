@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { CheckCircle2, XCircle } from "lucide-react"
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
   activeCampaigns: number
   syncedGames: number
   steamLastSyncedAt: string | null
+  lastMatchAt: string | null
 }
 
 function SyncBadge({ label, children }: { label: string; children: React.ReactNode }) {
@@ -21,23 +23,13 @@ function SyncBadge({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
-export function ConnectionBanner({
-  twitchConnected,
-  gqlConnected,
-  steamConnected,
-  activeCampaigns,
-  syncedGames,
-  steamLastSyncedAt,
-}: Props) {
-  const [steamSyncLabel, setSteamSyncLabel] = useState("")
+function Elapsed({ at }: { at: string | null }) {
+  const [label, setLabel] = useState("")
   useEffect(() => {
     const update = () => {
-      if (!steamLastSyncedAt) {
-        setSteamSyncLabel("jamais")
-        return
-      }
-      const ago = Math.floor((Date.now() - new Date(steamLastSyncedAt).getTime()) / 1000)
-      setSteamSyncLabel(
+      if (!at) { setLabel("jamais"); return }
+      const ago = Math.floor((Date.now() - new Date(at).getTime()) / 1000)
+      setLabel(
         ago > 86400
           ? `${Math.floor(ago / 86400)}j`
           : ago > 3600
@@ -48,8 +40,19 @@ export function ConnectionBanner({
     update()
     const id = setInterval(update, 60000)
     return () => clearInterval(id)
-  }, [steamLastSyncedAt])
+  }, [at])
+  return <span className="font-mono text-xs text-muted-foreground">{label}</span>
+}
 
+export function ConnectionBanner({
+  twitchConnected,
+  gqlConnected,
+  steamConnected,
+  activeCampaigns,
+  syncedGames,
+  steamLastSyncedAt,
+  lastMatchAt,
+}: Props) {
   return (
     <div className="flex flex-wrap gap-3">
       <SyncBadge label="Twitch">
@@ -60,29 +63,39 @@ export function ConnectionBanner({
         )}
       </SyncBadge>
 
-      <SyncBadge label="Sync drops">
-        {gqlConnected ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-label="Synchronisé" />
-        ) : (
-          <XCircle className="h-5 w-5 text-destructive" aria-label="Non synchronisé" />
-        )}
+      <Link href="/dashboard/settings">
+        <SyncBadge label="Sync drops">
+          {gqlConnected ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-label="Synchronisé" />
+          ) : (
+            <XCircle className="h-5 w-5 text-destructive" aria-label="Non synchronisé" />
+          )}
+        </SyncBadge>
+      </Link>
+
+      <SyncBadge label="Match drops">
+        <Elapsed at={lastMatchAt} />
       </SyncBadge>
 
       <SyncBadge label="Campagnes">
         <span className="font-semibold">{activeCampaigns}</span>
       </SyncBadge>
 
-      <SyncBadge label="Steam">
-        {steamConnected ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-label="Synchronisé" />
-        ) : (
-          <XCircle className="h-5 w-5 text-destructive" aria-label="Non synchronisé" />
-        )}
-      </SyncBadge>
+      <Link href="/dashboard/settings">
+        <SyncBadge label="Steam">
+          {steamConnected ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" aria-label="Synchronisé" />
+          ) : (
+            <XCircle className="h-5 w-5 text-destructive" aria-label="Non synchronisé" />
+          )}
+        </SyncBadge>
+      </Link>
 
-      <SyncBadge label="Sync Steam">
-        <span className="font-mono text-xs text-muted-foreground">{steamSyncLabel}</span>
-      </SyncBadge>
+      <Link href="/dashboard/settings">
+        <SyncBadge label="Sync Steam">
+          <Elapsed at={steamLastSyncedAt} />
+        </SyncBadge>
+      </Link>
 
       <SyncBadge label="Jeux">
         <span className="font-semibold">{syncedGames}</span>

@@ -1,6 +1,6 @@
 # Twitch Drops Alerts
 
-Application multi-utilisateurs connectant Twitch (OAuth) et Steam (API key) pour détecter les drops Twitch correspondant à la bibliothèque Steam de l'utilisateur et envoyer des alertes par email.
+Ne manquez plus aucun drop Twitch : reliez votre compte Twitch et votre bibliothèque Steam pour être alerté automatiquement par email dès qu'une campagne de drops concerne l'un de vos jeux. Pas besoin de surveiller Twitch en permanence, l'application s'en charge pour vous — avec un tableau de bord pour suivre vos campagnes et votre historique d'alertes.
 
 ## Stack
 

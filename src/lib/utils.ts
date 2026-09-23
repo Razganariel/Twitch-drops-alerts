@@ -8,3 +8,5 @@ export function cn(...inputs: ClassValue[]) {
 export function normalize(name: string) {
   return name.toLowerCase().trim()
 }
+
+export const KOFI_URL = "https://ko-fi.com/razganariel"

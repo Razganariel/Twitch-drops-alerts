@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { encrypt, safeDecrypt } from "@/lib/encryption"
+import { settingSchema } from "@/lib/schemas/admin"
 import { testTwitchClientId, testTwitchCredentials, testResend, testSmtp } from "@/services/health"
 import { setMaintenanceValue } from "@/lib/maintenance"
 
@@ -36,7 +37,14 @@ export async function getSettings(): Promise<SettingValue[]> {
 
 export async function saveSetting(key: string, value: string) {
   await requireAdmin()
-  const encrypted = encrypt(value)
+
+  const parsed = settingSchema.safeParse({ key, value })
+  if (!parsed.success) {
+    const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0]
+    throw new Error(firstError ?? "Paramètre invalide")
+  }
+
+  const encrypted = encrypt(parsed.data.value)
   await prisma.appSetting.upsert({
     where: { key },
     update: { value: encrypted },
