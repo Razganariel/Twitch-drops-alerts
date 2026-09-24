@@ -11,7 +11,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { loginSchema } from "@/lib/schemas/auth"
 
-export function LoginForm({ twitchEnabled }: { twitchEnabled: boolean }) {
+export function LoginForm({
+  twitchEnabled,
+  twitchError,
+}: {
+  twitchEnabled: boolean
+  twitchError?: string | null
+}) {
   const router = useRouter()
   const [error, setError] = useState<string | undefined>()
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]> | null>(null)
@@ -100,6 +106,9 @@ export function LoginForm({ twitchEnabled }: { twitchEnabled: boolean }) {
           >
             {twitchEnabled ? "Connexion avec Twitch" : "Twitch non configuré"}
           </Button>
+          {twitchError && (
+            <p className="text-sm text-destructive">{twitchError}</p>
+          )}
           <div className="text-center text-sm">
             Pas encore de compte ?{" "}
             <Link href="/register" className="underline underline-offset-4">

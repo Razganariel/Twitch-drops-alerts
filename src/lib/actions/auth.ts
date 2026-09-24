@@ -1,10 +1,11 @@
 "use server"
 
 import bcrypt from "bcryptjs"
+import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { encrypt, hashValue } from "@/lib/encryption"
 import { registerSchema } from "@/lib/schemas/auth"
-import { checkRateLimit } from "@/lib/rate-limit"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 
 export async function registerUser(_prevState: string | undefined, formData: FormData) {
   const parsed = registerSchema.safeParse({
@@ -22,7 +23,12 @@ export async function registerUser(_prevState: string | undefined, formData: For
   const { name, email, password } = parsed.data
 
   const emailHash = hashValue(email)
+  const ip = getClientIp(await headers())
+
   if (!checkRateLimit(`register:${emailHash}`)) {
+    return "Trop de tentatives, réessaye dans 15 minutes"
+  }
+  if (!checkRateLimit(`register:${ip}`, 10)) {
     return "Trop de tentatives, réessaye dans 15 minutes"
   }
 

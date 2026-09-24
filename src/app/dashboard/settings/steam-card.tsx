@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useState, useEffect } from "react"
+import { useActionState, useState, useSyncExternalStore } from "react"
 import { Loader2, Pencil } from "lucide-react"
 import type { ConnectSteamResult } from "@/lib/actions/steam"
 import { connectSteam } from "@/lib/actions/steam"
@@ -27,6 +27,9 @@ export function SteamConnectionCard({
   timezone: string
   connection: SteamConnectionData
 }) {
+  const [editingApiKey, setEditingApiKey] = useState(false)
+  const [apiKeyDraft, setApiKeyDraft] = useState("")
+
   const [result, formAction, isPending] = useActionState(
     async (_prev: ConnectSteamResult | null, formData: FormData) => {
       const parsed = steamSchema.safeParse({
@@ -38,18 +41,13 @@ export function SteamConnectionCard({
         const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0]
         return { ok: false, message: firstError ?? "Données invalides" }
       }
-      return connectSteam(_prev, formData)
+      const res = await connectSteam(_prev, formData)
+      if (res.ok) setEditingApiKey(false)
+      return res
     },
     null,
   )
   const cooldown = useCooldown("sync:steam", syncCooldownMs)
-
-  const [editingApiKey, setEditingApiKey] = useState(false)
-  const [apiKeyDraft, setApiKeyDraft] = useState("")
-
-  useEffect(() => {
-    if (result?.ok) setEditingApiKey(false)
-  }, [result])
 
   const isConnected = !!(connection || result?.steamId)
   const showConnected = isConnected && !result?.needsReauth
@@ -100,7 +98,7 @@ export function SteamConnectionCard({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Prochaine synchro auto</span>
-                      <NextSyncInfo lastSyncedAt={connection.lastSyncedAt} timezone={timezone} />
+                      <NextSyncInfo lastSyncedAt={connection.lastSyncedAt} />
                     </div>
                   </>
                 )}
@@ -195,13 +193,27 @@ export function SteamConnectionCard({
   )
 }
 
-function NextSyncInfo({ lastSyncedAt, timezone }: { lastSyncedAt: Date; timezone: string }) {
+let cachedNow = Date.now()
+
+function subscribeToNow(onStoreChange: () => void) {
+  const id = setInterval(() => {
+    cachedNow = Date.now()
+    onStoreChange()
+  }, 60_000)
+  return () => clearInterval(id)
+}
+
+function getCachedNow() {
+  return cachedNow
+}
+
+function NextSyncInfo({ lastSyncedAt }: { lastSyncedAt: Date }) {
   const DAY_MS = 86_400_000
-  const now = Date.now()
+  const now = useSyncExternalStore(subscribeToNow, getCachedNow, getCachedNow)
   const nextSync = lastSyncedAt.getTime() + DAY_MS
   const remaining = nextSync - now
 
-  if (remaining <= 0) return <span>Aujourd'hui</span>
+  if (remaining <= 0) return <span>Aujourd&apos;hui</span>
 
   const hours = Math.floor(remaining / 3_600_000)
   const minutes = Math.floor((remaining % 3_600_000) / 60_000)

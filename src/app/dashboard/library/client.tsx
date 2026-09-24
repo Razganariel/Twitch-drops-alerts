@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
+import Image from "next/image"
 import { Search, ExternalLink, Trash2, RotateCcw, Bell, BellOff, Plus, Loader2, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -126,7 +127,7 @@ function GameRow({ game }: { game: GameEntry }) {
   return (
     <div className={`flex items-center gap-3 py-3 ${isDeleted ? "opacity-50" : ""}`}>
       {game.logoUrl ? (
-        <img src={game.logoUrl} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
+        <Image src={game.logoUrl} alt="" width={40} height={40} className="h-10 w-10 rounded object-cover shrink-0" />
       ) : (
         <div className="h-10 w-10 rounded bg-muted shrink-0 flex items-center justify-center text-xs text-muted-foreground">
           N/A
@@ -274,9 +275,11 @@ function SearchModal({ onClose }: { onClose: () => void }) {
               {results.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 py-2 px-2">
                   {item.tiny_image ? (
-                    <img
+                    <Image
                       src={`https://shared.steamstatic.com/store_item_assets/steam/apps/${item.id}/capsule_231x87.jpg`}
                       alt=""
+                      width={231}
+                      height={87}
                       className="h-10 w-auto rounded object-cover shrink-0"
                     />
                   ) : (

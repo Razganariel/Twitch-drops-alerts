@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import Image from "next/image"
 import { Bell, BellOff, BellRing, Mail, MailCheck, ChevronDown, ChevronUp, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -40,10 +41,11 @@ type Props = {
 export function CampaignRow({ campaign, timezone }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [localAlert, setLocalAlert] = useState(campaign.alert)
-
-  useEffect(() => {
+  const [prevAlert, setPrevAlert] = useState(campaign.alert)
+  if (campaign.alert !== prevAlert) {
+    setPrevAlert(campaign.alert)
     setLocalAlert(campaign.alert)
-  }, [campaign.alert])
+  }
 
   async function handleMarkRead(alertId: string) {
     await markAlertAsRead(alertId)
@@ -54,9 +56,11 @@ export function CampaignRow({ campaign, timezone }: Props) {
     <div className="rounded-md border">
       <div className="flex items-center gap-3 p-3">
         {campaign.gameBoxArtUrl ? (
-          <img
+          <Image
             src={campaign.gameBoxArtUrl.replace("{width}x{height}", "40x52")}
             alt=""
+            width={32}
+            height={40}
             className="h-10 w-8 rounded object-cover shrink-0"
           />
         ) : (
@@ -131,7 +135,7 @@ export function CampaignRow({ campaign, timezone }: Props) {
           {campaign.dropItems.map((item) => (
             <div key={item.id} className="flex items-center gap-2 text-sm pl-11">
               {item.rewardImageUrl ? (
-                <img src={item.rewardImageUrl} alt="" className="h-6 w-6 rounded object-cover" />
+                <Image src={item.rewardImageUrl} alt="" width={24} height={24} className="h-6 w-6 rounded object-cover" />
               ) : (
                 <div className="h-6 w-6 rounded bg-muted shrink-0" />
               )}

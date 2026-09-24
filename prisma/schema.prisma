@@ -102,9 +102,6 @@ model TwitchConnection {
   accessToken       String?
   refreshToken      String?
   expiresAt         DateTime?
-  gqlAccessToken    String?
-  gqlRefreshToken   String?
-  gqlTokenExpiresAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -191,6 +188,7 @@ model OtpCode {
   codeHash  String
   purpose   String
   expiresAt DateTime
+  attempts  Int      @default(0)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

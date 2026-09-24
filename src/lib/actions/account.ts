@@ -1,9 +1,11 @@
 "use server"
 
 import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { maskValue, safeDecrypt } from "@/lib/encryption"
 import { createOtp, sendOtpEmail, verifyOtp } from "@/lib/otp"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 import { z } from "zod"
 
 const purposeSchema = z.enum(["download", "delete"], { message: "Finalité invalide" })
@@ -14,6 +16,14 @@ export async function requestOtp(purpose: "download" | "delete") {
   if (!parsed.success) return { ok: false, message: "Finalité invalide" } as const
   const session = await auth()
   if (!session?.user?.id) return { ok: false, message: "Non connecté" } as const
+
+  const ip = getClientIp(await headers())
+  if (!checkRateLimit(`otp-request:${session.user.id}`, 5)) {
+    return { ok: false, message: "Trop de codes demandés, réessaye plus tard" } as const
+  }
+  if (!checkRateLimit(`otp-request:${ip}`, 20)) {
+    return { ok: false, message: "Trop de codes demandés, réessaye plus tard" } as const
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

@@ -1,5 +1,14 @@
 const attempts = new Map<string, { count: number; resetAt: number }>()
 
+export function getClientIp(headers: { get(name: string): string | null }): string {
+  const forwarded = headers.get("x-forwarded-for")
+  if (forwarded) {
+    const ip = forwarded.split(",")[0]?.trim()
+    if (ip) return ip
+  }
+  return headers.get("x-real-ip")?.trim() || "unknown"
+}
+
 export function checkRateLimit(key: string, maxAttempts = 5, windowMs = 15 * 60 * 1000): boolean {
   const now = Date.now()
   const entry = attempts.get(key)
