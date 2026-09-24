@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Bell, BellOff, BellRing, Mail, MailCheck, ChevronDown, ChevronUp, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -57,9 +58,11 @@ export function CampaignCard({ campaign, timezone }: Props) {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start gap-3">
           {campaign.gameBoxArtUrl ? (
-            <img
+            <Image
               src={campaign.gameBoxArtUrl.replace("{width}x{height}", "80x106")}
               alt=""
+              width={60}
+              height={80}
               className="h-20 w-15 rounded object-cover shrink-0"
             />
           ) : (
@@ -142,7 +145,7 @@ export function CampaignCard({ campaign, timezone }: Props) {
                 {campaign.dropItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-2 text-sm">
                     {item.rewardImageUrl ? (
-                      <img src={item.rewardImageUrl} alt="" className="h-8 w-8 rounded object-cover" />
+                      <Image src={item.rewardImageUrl} alt="" width={32} height={32} className="h-8 w-8 rounded object-cover" />
                     ) : (
                       <div className="h-8 w-8 rounded bg-muted shrink-0" />
                     )}
