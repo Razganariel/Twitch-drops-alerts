@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 import { useTheme } from "next-themes"
 import { Sun, Moon, Monitor } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,11 +13,11 @@ const modes = [
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const current = theme === "system" ? "system" : (theme ?? "system")
   const currentIndex = modes.findIndex((m) => m.value === current)

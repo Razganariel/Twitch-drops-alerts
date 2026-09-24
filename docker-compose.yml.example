@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: PLACE_HOLDER_PASSWORD
       POSTGRES_DB: PLACE_HOLDER_DB
     ports:
-      - "5432:5432"
+      # Accessible depuis l'hôte uniquement (outils prisma), pas depuis le réseau extérieur
+      - "127.0.0.1:5432:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data:Z
     healthcheck:
@@ -21,8 +22,9 @@ services:
   redis:
     container_name: twitch-drops-redis
     image: docker.io/library/redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Service optionnel : non démarré par défaut. Activer quand nécessaire avec :
+    #   docker compose --profile optional up -d redis
+    profiles: ["optional"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -37,15 +39,14 @@ services:
       context: .
       target: app-runner
     ports:
-      - "3330:3330"
+      # Seul nginx (hôte) accède à l'app ; pas d'exposition directe
+      - "127.0.0.1:3330:3330"
     environment:
       - PORT=3330
       - DATABASE_URL=postgresql://PLACE_HOLDER_USER:PLACE_HOLDER_PASSWORD@postgres:5432/PLACE_HOLDER_DB?schema=public
     env_file: .env
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: on-failure:5
     mem_limit: 256m
@@ -60,8 +61,6 @@ services:
     env_file: .env
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: on-failure:5
     mem_limit: 256m

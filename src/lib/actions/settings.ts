@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
-import { stripHtml } from "@/lib/schemas/helpers"
 import { checkIntervalSchema, dashboardPreferencesSchema } from "@/lib/schemas/settings"
 
 export async function updateCheckInterval(_prevState: unknown, formData: FormData) {
@@ -26,7 +25,21 @@ export async function updateCheckInterval(_prevState: unknown, formData: FormDat
   return { ok: true, message: "Intervalle mis à jour" }
 }
 
-const timezoneSchema = z.string().min(1).max(50).transform(stripHtml)
+const timezoneSchema = z
+  .string()
+  .min(1)
+  .max(50)
+  .refine(
+    (v) => {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: v })
+        return true
+      } catch {
+        return false
+      }
+    },
+    "Fuseau invalide"
+  )
 
 export async function updateTimezone(formData: FormData) {
   const session = await auth()

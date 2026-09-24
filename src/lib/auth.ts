@@ -2,12 +2,13 @@ import NextAuth, { DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import Twitch from "next-auth/providers/twitch"
 import { PrismaAdapter } from "@auth/prisma-adapter"
+import { AdapterUser } from "next-auth/adapters"
 import bcrypt from "bcryptjs"
 
 import { prisma } from "@/lib/prisma"
 import { encrypt, decrypt, safeDecrypt, hashValue } from "@/lib/encryption"
 import { loginSchema } from "@/lib/schemas/auth"
-import { checkRateLimit } from "@/lib/rate-limit"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 
 declare module "next-auth" {
   interface Session {
@@ -31,6 +32,22 @@ type TwitchProfile = {
 
 const baseAdapter = PrismaAdapter(prisma)
 
+function toAdapterUser(u: {
+  id: string
+  name: string | null
+  email: string | null
+  emailVerified: Date | null
+  image: string | null
+}): AdapterUser {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email ?? "",
+    emailVerified: u.emailVerified,
+    image: u.image,
+  }
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   adapter: {
@@ -45,34 +62,40 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           emailHash,
         },
       })
-      return {
-        ...created,
+      return toAdapterUser({
+        id: created.id,
+        name: userData.name ?? null,
         email: userData.email,
-        name: userData.name,
-      } as any
+        emailVerified: created.emailVerified,
+        image: created.image,
+      })
     },
     async getUserByEmail(email) {
       const emailHash = hashValue(email)
       const user = await prisma.user.findUnique({ where: { emailHash } })
-      if (!user) return null as any
-      return {
-        ...user,
-        email: decrypt(user.email!),
+      if (!user) return null
+      return toAdapterUser({
+        id: user.id,
         name: user.name ? decrypt(user.name) : null,
-      } as any
+        email: decrypt(user.email!),
+        emailVerified: user.emailVerified,
+        image: user.image,
+      })
     },
     async getUserByAccount({ provider, providerAccountId }) {
       const account = await prisma.account.findUnique({
         where: { provider_providerAccountId: { provider, providerAccountId } },
         include: { user: true },
       })
-      if (!account) return null as any
+      if (!account) return null
       const user = account.user
-      return {
-        ...user,
-        email: user.email ? safeDecrypt(user.email) : null,
+      return toAdapterUser({
+        id: user.id,
         name: user.name ? safeDecrypt(user.name) : null,
-      } as any
+        email: user.email ? safeDecrypt(user.email) : null,
+        emailVerified: user.emailVerified,
+        image: user.image,
+      })
     },
     async updateUser(userData) {
       const data: Record<string, unknown> = { ...userData }
@@ -86,11 +109,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         where: { id: userData.id },
         data,
       })
-      return {
-        ...updated,
-        email: decrypt(updated.email!),
+      return toAdapterUser({
+        id: updated.id,
         name: updated.name ? decrypt(updated.name) : null,
-      } as any
+        email: decrypt(updated.email!),
+        emailVerified: updated.emailVerified,
+        image: updated.image,
+      })
     },
   },
   session: { strategy: "jwt" },
@@ -103,13 +128,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Mot de passe", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
         const { email, password } = parsed.data
         const emailHash = hashValue(email)
+        const ip = getClientIp(request.headers)
+
         if (!checkRateLimit(`login:${emailHash}`)) return null
+        if (!checkRateLimit(`login:${ip}`, 20)) return null
 
         const user = await prisma.user.findUnique({ where: { emailHash } })
 
@@ -130,8 +158,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Twitch({
       clientId: process.env.TWITCH_CLIENT_ID!,
       clientSecret: process.env.TWITCH_CLIENT_SECRET!,
-      checks: [],
-      allowDangerousEmailAccountLinking: true,
+      checks: ["state"],
       authorization: {
         params: {
           scope: "openid user:read:email user:read:follows",
