@@ -223,7 +223,7 @@ export default function AdminPage() {
               <Badge variant="outline" className="text-muted-foreground">Non configuré</Badge>
             )}
           </div>
-          <CardDescription>Client ID et Client Secret de l'application Twitch</CardDescription>
+          <CardDescription>Client ID et Client Secret de l&apos;application Twitch</CardDescription>
         </CardHeader>
         <CardContent>
           {twitchEditing ? (

@@ -8,13 +8,6 @@ import { safeDecrypt, encrypt, decrypt } from "@/lib/encryption"
 import { sendDropAlert } from "@/services/email"
 import { getSteamLibrary, getSteamLogoUrl } from "@/services/steam"
 
-type DropItemData = {
-  name: string
-  rewardName: string | null
-  rewardImageUrl: string | null
-  requiredMinutesWatched: number | null
-}
-
 export async function runPeriodicSync() {
   console.log("[sync] Début de la synchronisation planifiée")
 
