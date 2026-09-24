@@ -100,7 +100,7 @@ export function SteamConnectionCard({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Prochaine synchro auto</span>
-                      <NextSyncInfo lastSyncedAt={connection.lastSyncedAt} timezone={timezone} />
+                      <NextSyncInfo lastSyncedAt={connection.lastSyncedAt} />
                     </div>
                   </>
                 )}
@@ -195,13 +195,13 @@ export function SteamConnectionCard({
   )
 }
 
-function NextSyncInfo({ lastSyncedAt, timezone }: { lastSyncedAt: Date; timezone: string }) {
+function NextSyncInfo({ lastSyncedAt }: { lastSyncedAt: Date }) {
   const DAY_MS = 86_400_000
   const now = Date.now()
   const nextSync = lastSyncedAt.getTime() + DAY_MS
   const remaining = nextSync - now
 
-  if (remaining <= 0) return <span>Aujourd'hui</span>
+  if (remaining <= 0) return <span>Aujourd&apos;hui</span>
 
   const hours = Math.floor(remaining / 3_600_000)
   const minutes = Math.floor((remaining % 3_600_000) / 60_000)
