@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Loader2, Power } from "lucide-react"
 import { toggleMaintenance } from "@/lib/actions/admin"
 
 export default function MaintenancePage() {
+  const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [checking, setChecking] = useState(true)
   const [toggling, setToggling] = useState(false)
@@ -23,7 +25,7 @@ export default function MaintenancePage() {
     setToggling(true)
     try {
       await toggleMaintenance()
-      window.location.href = "/dashboard"
+      router.push("/dashboard")
     } catch {}
   }
 
