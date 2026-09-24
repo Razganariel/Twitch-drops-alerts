@@ -80,6 +80,8 @@ export default function AdminPage() {
   }, [router])
 
   useEffect(() => {
+    // Faux positif : loadSettings est async, tous les setState sont exécutés après les awaits.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSettings()
   }, [loadSettings])
 
