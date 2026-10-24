@@ -16,8 +16,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const PER_PAGE = 25
 
-function formatDate(date: Date) {
-  return date.toLocaleDateString("fr-FR", {
+function formatDate(date: Date, timezone: string) {
+  return date.toLocaleString("fr-FR", {
+    timeZone: timezone,
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -37,9 +38,11 @@ type AlertRow = {
 function AlertTable({
   alerts,
   showActions,
+  timezone,
 }: {
   alerts: AlertRow[]
   showActions: boolean
+  timezone: string
 }) {
   if (alerts.length === 0) return null
 
@@ -60,7 +63,7 @@ function AlertTable({
           {alerts.map((alert) => (
             <tr key={alert.id} className="border-b last:border-0">
               <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                {formatDate(alert.sentAt)}
+                {formatDate(alert.sentAt, timezone)}
               </td>
               <td className={`px-4 py-3 font-medium ${!alert.drop.isActive ? "line-through text-muted-foreground" : ""}`}>
                 {alert.game.name}
@@ -115,7 +118,7 @@ function AlertTable({
               )}
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{formatDate(alert.sentAt)}</span>
+              <span>{formatDate(alert.sentAt, timezone)}</span>
               {showActions && alert.drop.isActive && alert.status === "SENT" && (
                 <form action={markAlertAsRead.bind(null, alert.id)}>
                   <Button type="submit" variant="ghost" size="sm" className="h-7 text-xs">Marquer comme lue</Button>
@@ -144,6 +147,12 @@ export default async function AlertsPage(props: {
   if (statusFilter === "SENT") statusWhere = { status: "SENT" }
   else if (statusFilter === "READ") statusWhere = { status: "READ" }
   const where = { ...whereBase, ...statusWhere }
+
+  const userData = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { timezone: true },
+  })
+  const tz = userData?.timezone ?? "UTC"
 
   const [rawActive, rawEnded, activeCount, endedCount] = await Promise.all([
     prisma.alert.findMany({
@@ -220,7 +229,7 @@ export default async function AlertsPage(props: {
       {activeAlerts.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">En cours</h2>
-          <AlertTable alerts={activeAlerts} showActions />
+          <AlertTable alerts={activeAlerts} showActions timezone={tz} />
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               {page > 1 && (
@@ -253,7 +262,7 @@ export default async function AlertsPage(props: {
             Terminées
             <span className="ml-2 text-sm font-normal">({endedCount})</span>
           </h2>
-          <AlertTable alerts={endedAlerts} showActions={false} />
+          <AlertTable alerts={endedAlerts} showActions={false} timezone={tz} />
         </section>
       )}
 

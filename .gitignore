@@ -48,3 +48,4 @@ next-env.d.ts
 
 # session context
 /AGENTS.md
+docker-compose.yml

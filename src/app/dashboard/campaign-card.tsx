@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import Image from "next/image"
 import { Bell, BellOff, BellRing, Mail, MailCheck, ChevronDown, ChevronUp, Clock } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,15 +36,17 @@ type Campaign = {
 
 type Props = {
   campaign: Campaign
+  timezone: string
 }
 
-export function CampaignCard({ campaign }: Props) {
+export function CampaignCard({ campaign, timezone }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [localAlert, setLocalAlert] = useState(campaign.alert)
-
-  useEffect(() => {
+  const [prevAlert, setPrevAlert] = useState(campaign.alert)
+  if (campaign.alert !== prevAlert) {
+    setPrevAlert(campaign.alert)
     setLocalAlert(campaign.alert)
-  }, [campaign.alert])
+  }
 
   async function handleMarkRead(alertId: string) {
     await markAlertAsRead(alertId)
@@ -55,9 +58,11 @@ export function CampaignCard({ campaign }: Props) {
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start gap-3">
           {campaign.gameBoxArtUrl ? (
-            <img
+            <Image
               src={campaign.gameBoxArtUrl.replace("{width}x{height}", "80x106")}
               alt=""
+              width={60}
+              height={80}
               className="h-20 w-15 rounded object-cover shrink-0"
             />
           ) : (
@@ -74,7 +79,7 @@ export function CampaignCard({ campaign }: Props) {
                 {campaign.dropItems.length} drop{campaign.dropItems.length > 1 ? "s" : ""}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                {new Date(campaign.startAt).toLocaleDateString("fr-FR")}
+                {new Date(campaign.startAt).toLocaleDateString("fr-FR", { timeZone: timezone })}
               </span>
             </div>
           </div>
@@ -111,11 +116,11 @@ export function CampaignCard({ campaign }: Props) {
           <Clock className="h-3 w-3" />
           <span>
             {new Date(campaign.startAt).toLocaleDateString("fr-FR", {
-              day: "numeric", month: "short",
+              day: "numeric", month: "short", timeZone: timezone,
             })}{" "}
             →{" "}
             {new Date(campaign.endAt).toLocaleDateString("fr-FR", {
-              day: "numeric", month: "short", year: "numeric",
+              day: "numeric", month: "short", year: "numeric", timeZone: timezone,
             })}
           </span>
         </div>
@@ -140,7 +145,7 @@ export function CampaignCard({ campaign }: Props) {
                 {campaign.dropItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-2 text-sm">
                     {item.rewardImageUrl ? (
-                      <img src={item.rewardImageUrl} alt="" className="h-8 w-8 rounded object-cover" />
+                      <Image src={item.rewardImageUrl} alt="" width={32} height={32} className="h-8 w-8 rounded object-cover" />
                     ) : (
                       <div className="h-8 w-8 rounded bg-muted shrink-0" />
                     )}

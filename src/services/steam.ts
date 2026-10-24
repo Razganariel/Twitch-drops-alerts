@@ -22,7 +22,7 @@ type ResolveVanityUrlResponse = {
 }
 
 export async function getSteamLibrary(steamId: string, apiKey: string) {
-  const url = `${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v1?key=${apiKey}&steamid=${steamId}&include_appinfo=true&include_played_free_games=true&include_free_sub=true&format=json`
+  const url = `${STEAM_API_BASE}/IPlayerService/GetOwnedGames/v1?key=${encodeURIComponent(apiKey)}&steamid=${encodeURIComponent(steamId)}&include_appinfo=true&include_played_free_games=true&include_free_sub=true&format=json`
 
   const response = await fetch(url)
   if (!response.ok) {
@@ -42,7 +42,7 @@ export async function getSteamLibrary(steamId: string, apiKey: string) {
 }
 
 export async function resolveSteamVanityUrl(username: string, apiKey: string) {
-  const url = `${STEAM_API_BASE}/ISteamUser/ResolveVanityURL/v1?key=${apiKey}&vanityurl=${username}&format=json`
+  const url = `${STEAM_API_BASE}/ISteamUser/ResolveVanityURL/v1?key=${encodeURIComponent(apiKey)}&vanityurl=${encodeURIComponent(username)}&format=json`
 
   const response = await fetch(url)
   if (!response.ok) {

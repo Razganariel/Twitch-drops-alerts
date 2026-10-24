@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Power, PowerOff, Pencil } from "lucide-react"
+import { Power, PowerOff, Pencil, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getSettings, saveSetting, testSetting, toggleMaintenance, getEnvSettings } from "@/lib/actions/admin"
+import { getSettings, saveSetting, testSetting, toggleMaintenance, getEnvSettings, forceSync } from "@/lib/actions/admin"
 import { Loader2, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react"
 
 type SettingEntry = {
@@ -54,6 +54,14 @@ export default function AdminPage() {
   const [smtpPass, setSmtpPass] = useState("")
   const [savingSmtp, setSavingSmtp] = useState(false)
   const [togglingMaintenance, setTogglingMaintenance] = useState(false)
+  const [twitchEditing, setTwitchEditing] = useState(false)
+  const [twitchClientId, setTwitchClientId] = useState("")
+  const [twitchClientSecret, setTwitchClientSecret] = useState("")
+  const [savingTwitch, setSavingTwitch] = useState(false)
+  const [syncCooldownValue, setSyncCooldownValue] = useState("")
+  const [savingCooldown, setSavingCooldown] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{ ok: boolean; count: number } | null>(null)
 
   const loadSettings = useCallback(async () => {
     try {
@@ -62,6 +70,8 @@ export default function AdminPage() {
       setEnvSettings(env)
       const maint = data.find((s) => s.key === "maintenance")
       setMaintenanceActive(maint?.value === "true")
+      const cooldown = data.find((s) => s.key === "SYNC_COOLDOWN_SECONDS")
+      setSyncCooldownValue(cooldown?.value ?? "300")
     } catch {
       router.push("/dashboard")
     } finally {
@@ -70,6 +80,8 @@ export default function AdminPage() {
   }, [router])
 
   useEffect(() => {
+    // Faux positif : loadSettings est async, tous les setState sont exécutés après les awaits.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSettings()
   }, [loadSettings])
 
@@ -110,6 +122,16 @@ export default function AdminPage() {
       setTestResult(null)
     } catch {}
     setTogglingMaintenance(false)
+  }
+
+  async function handleForceSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const result = await forceSync()
+      setSyncResult(result)
+    } catch {}
+    setSyncing(false)
   }
 
   if (loading) {
@@ -161,12 +183,125 @@ export default function AdminPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Paramètres dynamiques</CardTitle>
-          <CardDescription>Ces paramètres sont stockés en base de données et chiffrés au repos</CardDescription>
+          <CardTitle>Synchronisation des drops</CardTitle>
+          <CardDescription>
+            Déclencher immédiatement la synchro des campagnes et les alertes,
+            sans attendre le cycle automatique du worker (60 s)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={handleForceSync}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {syncing ? "Synchronisation en cours..." : "Forcer la synchro"}
+            </Button>
+            {syncResult && (
+              <span className={`text-sm ${syncResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {syncResult.ok
+                  ? `${syncResult.count} alerte${syncResult.count > 1 ? "s" : ""} générée${syncResult.count > 1 ? "s" : ""}`
+                  : "Échec de la synchronisation"}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Client Twitch</CardTitle>
+            {isConfigured("TWITCH_CLIENT_ID") && isConfigured("TWITCH_CLIENT_SECRET") ? (
+              <Badge variant="outline" className="text-emerald-600 border-emerald-600">Configuré</Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground">Non configuré</Badge>
+            )}
+          </div>
+          <CardDescription>Client ID et Client Secret de l&apos;application Twitch</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {twitchEditing ? (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Client ID</Label>
+                <Input value={twitchClientId} onChange={(e) => setTwitchClientId(e.target.value)} placeholder="Client ID Twitch" className="h-9 text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Client Secret</Label>
+                <Input value={twitchClientSecret} onChange={(e) => setTwitchClientSecret(e.target.value)} type="password" placeholder="••••••••" className="h-9 text-sm" />
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" onClick={async () => {
+                  setSavingTwitch(true)
+                  try {
+                    await saveSetting("TWITCH_CLIENT_ID", twitchClientId)
+                    if (twitchClientSecret) await saveSetting("TWITCH_CLIENT_SECRET", twitchClientSecret)
+                    setTwitchEditing(false)
+                    await loadSettings()
+                  } catch {}
+                  setSavingTwitch(false)
+                }} disabled={savingTwitch}>
+                  {savingTwitch ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setTwitchEditing(false)}>Annuler</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Client ID</Label>
+                <p className="text-sm font-mono mt-0.5">{getValue("TWITCH_CLIENT_ID") || "Non configuré"}</p>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Client Secret</Label>
+                <p className="text-sm font-mono mt-0.5">{isConfigured("TWITCH_CLIENT_SECRET") ? "••••••••" : "Non configuré"}</p>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => {
+                  setTwitchClientId(getValue("TWITCH_CLIENT_ID"))
+                  setTwitchClientSecret("")
+                  setTwitchEditing(true)
+                }}>
+                  <Pencil className="h-4 w-4" />
+                  Modifier
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => handleTest("TWITCH_CLIENT_SECRET")} disabled={testing === "TWITCH_CLIENT_SECRET" || !isConfigured("TWITCH_CLIENT_ID") || !isConfigured("TWITCH_CLIENT_SECRET")}>
+                  {testing === "TWITCH_CLIENT_SECRET" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Tester"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+        {testResult && testResult.key === "TWITCH_CLIENT_SECRET" && (
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-2 rounded-md border px-4 py-3">
+              {testResult.result.ok ? (
+                <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-destructive shrink-0" />
+              )}
+              <span className="text-sm">{testResult.result.message}</span>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Clé API Resend</CardTitle>
+          <CardDescription>Service d&apos;envoi d&apos;emails utilisé pour les alertes</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {Object.entries(SETTING_META).map(([key, meta]) => {
-            if (key === "maintenance" || key.startsWith("SMTP_")) return null
+            if (key === "maintenance" || key.startsWith("SMTP_") || key === "TWITCH_CLIENT_ID" || key === "TWITCH_CLIENT_SECRET") return null
             const configured = isConfigured(key)
             const isSecret = meta.secret
             const showValue = !isSecret || showSecrets.has(key)
@@ -232,6 +367,52 @@ export default function AdminPage() {
               </div>
             )
           })}
+        </CardContent>
+        {testResult && testResult.key === "RESEND_API_KEY" && (
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-2 rounded-md border px-4 py-3">
+              {testResult.result.ok ? (
+                <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-destructive shrink-0" />
+              )}
+              <span className="text-sm">{testResult.result.message}</span>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cooldown de synchronisation</CardTitle>
+          <CardDescription>Délai minimum (en secondes) entre deux synchronisations manuelles des jeux suivis Twitch ou de la bibliothèque Steam</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              min={0}
+              value={syncCooldownValue}
+              onChange={(e) => setSyncCooldownValue(e.target.value)}
+              className="h-9 text-sm w-32"
+              placeholder="300"
+            />
+            <span className="text-sm text-muted-foreground">secondes</span>
+            <Button
+              size="sm"
+              onClick={async () => {
+                setSavingCooldown(true)
+                try {
+                  await saveSetting("SYNC_COOLDOWN_SECONDS", String(Number(syncCooldownValue) || 300))
+                  await loadSettings()
+                } catch {}
+                setSavingCooldown(false)
+              }}
+              disabled={savingCooldown}
+            >
+              {savingCooldown ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -328,18 +509,19 @@ export default function AdminPage() {
             </div>
           )}
         </CardContent>
+        {testResult && testResult.key === "SMTP" && (
+          <CardContent className="pt-0">
+            <div className="flex items-center gap-2 rounded-md border px-4 py-3">
+              {testResult.result.ok ? (
+                <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-destructive shrink-0" />
+              )}
+              <span className="text-sm">{testResult.result.message}</span>
+            </div>
+          </CardContent>
+        )}
       </Card>
-
-      {testResult && (
-        <div className="flex items-center gap-2 rounded-md border px-4 py-3">
-          {testResult.result.ok ? (
-            <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
-          ) : (
-            <XCircle className="h-5 w-5 text-destructive shrink-0" />
-          )}
-          <span className="text-sm">{testResult.result.message}</span>
-        </div>
-      )}
 
       <Card>
         <CardHeader>

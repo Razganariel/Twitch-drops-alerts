@@ -1,4 +1,5 @@
 import "dotenv/config"
+import "./lib/logger"
 import { runPeriodicSync } from "./lib/sync"
 
 async function main() {

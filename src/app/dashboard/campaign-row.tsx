@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import Image from "next/image"
 import { Bell, BellOff, BellRing, Mail, MailCheck, ChevronDown, ChevronUp, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,15 +35,17 @@ type Campaign = {
 
 type Props = {
   campaign: Campaign
+  timezone: string
 }
 
-export function CampaignRow({ campaign }: Props) {
+export function CampaignRow({ campaign, timezone }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [localAlert, setLocalAlert] = useState(campaign.alert)
-
-  useEffect(() => {
+  const [prevAlert, setPrevAlert] = useState(campaign.alert)
+  if (campaign.alert !== prevAlert) {
+    setPrevAlert(campaign.alert)
     setLocalAlert(campaign.alert)
-  }, [campaign.alert])
+  }
 
   async function handleMarkRead(alertId: string) {
     await markAlertAsRead(alertId)
@@ -53,9 +56,11 @@ export function CampaignRow({ campaign }: Props) {
     <div className="rounded-md border">
       <div className="flex items-center gap-3 p-3">
         {campaign.gameBoxArtUrl ? (
-          <img
+          <Image
             src={campaign.gameBoxArtUrl.replace("{width}x{height}", "40x52")}
             alt=""
+            width={32}
+            height={40}
             className="h-10 w-8 rounded object-cover shrink-0"
           />
         ) : (
@@ -77,9 +82,9 @@ export function CampaignRow({ campaign }: Props) {
 
         <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline whitespace-nowrap">
           <Clock className="h-3 w-3 inline mr-1" />
-          {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+          {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
           {" → "}
-          {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+          {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
         </span>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -123,14 +128,14 @@ export function CampaignRow({ campaign }: Props) {
         <div className="border-t px-3 py-2 space-y-1.5">
           <div className="flex items-center gap-2 text-sm pl-11 text-muted-foreground sm:hidden">
             <Clock className="h-3 w-3 shrink-0" />
-            {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+            {new Date(campaign.startAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
             {" → "}
-            {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+            {new Date(campaign.endAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: timezone })}
           </div>
           {campaign.dropItems.map((item) => (
             <div key={item.id} className="flex items-center gap-2 text-sm pl-11">
               {item.rewardImageUrl ? (
-                <img src={item.rewardImageUrl} alt="" className="h-6 w-6 rounded object-cover" />
+                <Image src={item.rewardImageUrl} alt="" width={24} height={24} className="h-6 w-6 rounded object-cover" />
               ) : (
                 <div className="h-6 w-6 rounded bg-muted shrink-0" />
               )}
