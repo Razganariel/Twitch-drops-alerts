@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { GIT_URL } from "@/lib/utils"
 import { ArrowLeft, Shield, Database, EyeOff, Mail, Trash2, ExternalLink } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -201,7 +202,7 @@ export default function PrivacyPage() {
               Confidentialité
             </Link>
             <Link
-              href="https://github.com/dvergar/Twitch-drops-alerts"
+              href={GIT_URL}
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ExternalLink className="h-4 w-4" />

@@ -15,6 +15,7 @@ import {
   Coffee,
 } from "lucide-react"
 import { KOFI_URL } from "@/lib/utils"
+import { GIT_URL } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 export function generateMetadata(): Metadata {
@@ -251,7 +252,7 @@ export default async function Home() {
               Confidentialité
             </Link>
             <Link
-              href="https://github.com/dvergar/Twitch-drops-alerts"
+              href={GIT_URL}
               className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ExternalLink className="h-4 w-4" />

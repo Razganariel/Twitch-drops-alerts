@@ -10,3 +10,4 @@ export function normalize(name: string) {
 }
 
 export const KOFI_URL = "https://ko-fi.com/razganariel"
+export const GIT_URL = "https://github.com/Razganariel/Twitch-drops-alerts"
