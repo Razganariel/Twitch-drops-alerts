@@ -2,7 +2,7 @@ const TWITCH_API_BASE = "https://api.twitch.tv/helix"
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2"
 const TWITCH_GQL_BASE = "https://gql.twitch.tv/gql"
 const TWITCH_GQL_CLIENT_ID = "ue6666qo983tsx6so1t0vnawi233wa"
-const TWITCH_DROPS_API_BASE = process.env.TWITCH_DROPS_API_BASE ?? "https://twitch-drops-api.sunkwi.com"
+const TWITCH_DROPS_API_BASE = process.env.TWITCH_DROPS_API_BASE ?? "https://drops.sunkwi.com/api/twitch"
 
 type DropSource = "api" | "gql" | "hybrid"
 const DROP_SOURCE: DropSource =
@@ -333,12 +333,13 @@ export async function getActiveDropCampaignsFromApi(): Promise<TwitchDropCampaig
     throw new Error(`Twitch Drops API error: ${response.status} ${response.statusText}`)
   }
 
-  const payload = (await response.json()) as SunkwiBotDropsEntry[] | unknown
-  if (!Array.isArray(payload)) {
+  const payload = (await response.json()) as { games?: SunkwiBotDropsEntry[] } | SunkwiBotDropsEntry[] | unknown
+  const games = Array.isArray(payload) ? payload : (payload as { games?: unknown } | null)?.games
+  if (!Array.isArray(games)) {
     throw new Error("Twitch Drops API: réponse inattendue")
   }
 
-  return mapSunkwiBotDrops(payload)
+  return mapSunkwiBotDrops(games)
 }
 
 function mapSunkwiBotDrops(payload: SunkwiBotDropsEntry[]): TwitchDropCampaign[] {
